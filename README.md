@@ -8,6 +8,8 @@ This program requires LWJGL-3.2.3 with the following bindings:
 4. LWJGL-OpenAL  
 4. LWJGL-STB  
 4. LWJGL-OpenVR  
+  
+"resources" needs to be added to the build path. It consists of assets that need to be packaged with the executable (shaders, etc). "assets" needs to be in the same directory as the jar, but cannot be added to the build path.  
 *Right now this repo is private.* I will make it public when the game is released. If I do that and forget to delete this, apologies.  
   
 Now for more information about your permissions:  
