@@ -12,6 +12,6 @@ This program requires LWJGL-3.2.3 with the following bindings:
   
 Now for more information about your permissions:  
 Most of the assets and all of the source code is copyright 2020-2021 by Ray Anchordoquy.  
-You are allowed to view, download, and execute the assets and source code present in this repository, but you are not allowed to distribute any of the assets or source code (modified or not) found within this repository. If you email or message Ray Anchordoquy (ranchordo), ask nicely, and tell him what you plan to do with this source, he will probably give you the permission to do most of the above.  
+You are allowed to view, download, and execute the assets and source code present in this repository, but you are not allowed to distribute any of the assets or source code (modified or not) found within this repository in any way. If you email or message Ray Anchordoquy (ranchordo), ask nicely, and tell him what you plan to do with this source, he will probably give you the permission to do most of the above.  
   
 If you would like to fork this repository, you are required to keep the above legal notice (starting with "Most of the assets..." and ending with "to do most of the above") in your readme. I won't be too harsh with takdowns, etc. if you're obeying the general spirit of these requirements. Please just be a good person and respect the source.
