@@ -11,12 +11,12 @@ import org.lwjgl.BufferUtils;
 public class TextureImage {
 	//Backend openGL texture image thing.
 	private int id;
-	int binding;
-	int width;
-	int height;
+	public int binding;
+	public int width;
+	public int height;
 	private ByteBuffer pixels;
 	
-	BufferedImage bi;
+	public BufferedImage bi;
 	private Graphics initBI(BufferedImage input) { //Initialize internal BufferedImage with an input BI
 		bi=input;
 		Graphics g=bi.getGraphics();
@@ -24,18 +24,18 @@ public class TextureImage {
 		height=bi.getHeight();
 		return g;
 	}
-	void create(BufferedImage in) {
+	public void create(BufferedImage in) {
 		this.initBI(in);
 		this.applyBI();
 	}
-	TextureImage(int b) {
+	public TextureImage(int b) {
 		binding=b;
 		bi=null;
 		
 		width=0;
 		height=0;
 	}
-	void applyBI() { //Convert the internal BI to a bytebuffer and upload
+	public void applyBI() { //Convert the internal BI to a bytebuffer and upload
 		int[] pixels_raw=new int[width*height*4];
 		pixels_raw=bi.getRGB(0, 0, width, height, null, 0, width);
 		pixels=BufferUtils.createByteBuffer(width*height*4);
@@ -55,7 +55,7 @@ public class TextureImage {
 		upload();
 		
 	}
-	void upload() {
+	public void upload() {
 		glActiveTexture(GL_TEXTURE0+binding);
 		glBindTexture(GL_TEXTURE_2D,id);
 		glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pixels);
@@ -64,7 +64,7 @@ public class TextureImage {
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 		glBindTexture(GL_TEXTURE_2D,0);
 	}
-	void bind() { //Bind it!
+	public void bind() { //Bind it!
 		glActiveTexture(GL_TEXTURE0+binding);
 		glBindTexture(GL_TEXTURE_2D,id);
 	}

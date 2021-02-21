@@ -120,6 +120,15 @@ public class FrameBuffer {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	}
+	public void blitTo(FrameBuffer buffer, int id, int targID) {
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, buffer.fbo);
+		glDrawBuffer(GL_COLOR_ATTACHMENT0+targID);
+		glReadBuffer(GL_COLOR_ATTACHMENT0+id);
+		glBlitFramebuffer(0,0,RenderUtils.winW,RenderUtils.winH,0,0,RenderUtils.winW,RenderUtils.winH,GL_COLOR_BUFFER_BIT,GL_NEAREST);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	}
 	public void bind() {
 		glBindFramebuffer(GL_FRAMEBUFFER,fbo);
 		glDrawBuffers(ib);

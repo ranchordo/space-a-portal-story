@@ -27,6 +27,7 @@ import audio.Audio;
 import chamber.Chamber;
 import game.SaveState;
 import graphics.handlers.BloomHandler;
+import graphics.handlers.SSAOHandler;
 import lighting.Light;
 import lighting.Lighting;
 import logger.Logger;
@@ -40,6 +41,7 @@ import physics.Physics;
 import physics.State;
 import pooling.PoolElement;
 import pooling.PoolStrainer;
+import util.ComputeShader;
 import util.TextureCache;
 import util.Util;
 
@@ -55,6 +57,7 @@ public class Renderer {
 	public static Chamber activeChamber=new Chamber();
 	public static State camera=new State();
 	public static Shader activeShader=null;
+	public static ComputeShader activeComputeShader=null;
 	public static String dbg;
 	public static Transform camtr=new Transform();
 	public static Shader main;
@@ -143,17 +146,18 @@ public class Renderer {
 		
 		
 		//PUT CHAMBER CONTENTS HERE:
-		hld=test.add(new Door(new Vector3f(9.7f,0.2f,5),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),true));
+		//hld=test.add(new Door(new Vector3f(9.7f,0.2f,5),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),false));
 		test.add(new FaithPlate(new Vector3f(4,0.04f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),new Vector3f(0,20,0)));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,0,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
-		((Door)hld).setAttached(test.add(new Wall(new Vector2f(10,10), new Vector3f(10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90))))));
+		test.add(new Wall(new Vector2f(50,10), new Vector3f(0,0,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
+		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
+		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
+		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
+		//((Door)hld).setAttached(test.add(new Wall(new Vector2f(10,10), new Vector3f(10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90))))));
 		//test.add(new Fizzler(new Vector2f(2,2), new Vector3f(5,2,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90)))));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(-10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(270)))));
+		//test.add(new Wall(new Vector2f(10,10), new Vector3f(-10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(270)))));
 		//test.add(new Cube(new Vector3f(0,1,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),2));
 		test.add(new Cube(new Vector3f(0,2,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
+		test.add(new Cube(new Vector3f(0,3,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
 		//test.add(new Shooter(new Vector3f(-1,5.15f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270))),40000,true));
 		//hld=test.add(new ConnectionFilter().addToActivates(hld));
 		//hld=test.add(new Laser(new Vector3f(0,0.2f,1),Util.AxisAngle_np(new AxisAngle4f())));
@@ -184,13 +188,16 @@ public class Renderer {
 		Movement.initHandler(win);
 		Movement.initMovement();
 		BloomHandler.init();
+		SSAOHandler.init();
 		main=new Shader("main");
 		Shader screen=new Shader("screen");
 		Shader screen_basic=new Shader("screen_basic");
 		Screen blindfold=new Screen();
 		main.bind();
 		FrameBuffer fbo=new FrameBuffer(16,4,GL_RGBA16F);
-		FrameBuffer interfbo=new FrameBuffer(0);
+		FrameBuffer interfbo=new FrameBuffer(0,2,GL_RGBA16F);
+		FrameBuffer ssaoFBO=new FrameBuffer(0);
+		FrameBuffer ssaoMulFBO=new FrameBuffer(0);
 		FrameBuffer interfbo2=new FrameBuffer(0,2,GL_RGBA8);
 		FrameBuffer interfbo3=new FrameBuffer(0,1,GL_RGBA8);
 		camera.position(0.0f,Player.height,0.0f);
@@ -284,8 +291,9 @@ public class Renderer {
 			glClearStencil(128);
 			glPopMatrix();
 			
-			
-			fbo.blitTo(interfbo);
+			SSAOHandler.runSSAOTo(fbo,1,2,ssaoFBO,0);
+			fbo.blitTo(interfbo,0,0);
+			fbo.blitTo(ssaoMulFBO,3,0);
 			interfbo2.bind();
 			glClearColor(1,1,0,1);
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -307,6 +315,8 @@ public class Renderer {
 			screen.setUniform1f("gamma",gamma);
 			interfbo2.bindTexture(0,0);
 			interfbo3.bindTexture(0,1);
+			ssaoFBO.bindTexture(0,2);
+			ssaoMulFBO.bindTexture(0,3);
 			blindfold.render();
 			glEnable(GL_DEPTH_TEST);
 			

@@ -4,6 +4,8 @@ import static org.lwjgl.openal.AL10.*;
 
 import javax.vecmath.Vector3f;
 
+import game.Main;
+
 public class Source { //Very self explanatory.
 	public int sourceId;
 	public boolean playing=false;
@@ -18,7 +20,7 @@ public class Source { //Very self explanatory.
 	private Sound activeSound=null;
 	public Source() {
 		sourceId=alGenSources();
-		alSourcef(sourceId,AL_GAIN,1);
+		alSourcef(sourceId,AL_GAIN,Main.volume);
 		alSourcef(sourceId,AL_PITCH,1);
 		alSource3f(sourceId,AL_POSITION,pos.x,pos.y,pos.z);
 		alSource3f(sourceId,AL_VELOCITY,vel.x,vel.y,vel.z);
@@ -37,7 +39,7 @@ public class Source { //Very self explanatory.
 //		if(z!=null) {this.pos.z=z;}
 //	}
 	public void setGain(float gain) {
-		alSourcef(sourceId,AL_GAIN,gain);
+		alSourcef(sourceId,AL_GAIN,gain*Main.volume);
 	}
 	public void setPitch(float pitch) {
 		alSourcef(sourceId,AL_PITCH,pitch);

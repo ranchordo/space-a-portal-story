@@ -227,10 +227,14 @@ public class Player extends Thing {
 	private Vector3f inter_axis=new Vector3f();
 	private Matrix4f pendingtransform=new Matrix4f();
 	private Vector3f nothing=new Vector3f();
+	private Vector3f linvel=new Vector3f();
 	private Matrix4f inverseTransform=new Matrix4f();
 	public Matrix4f getInverseTransform() {return inverseTransform;}
 	@Override
 	public void logic() {
+		geo.body.getLinearVelocity(linvel);
+		linvel.set(linvel.x,0,linvel.z);
+		System.out.println(linvel.length());
 		//System.out.println(npflag+"1, "+npflag2+"2, "+portalingCollisionsEnabled+"col");
 		//if(inverseTransform==null) {inverseTransform=new Matrix4f();}
 		if(in.mr(GLFW_MOUSE_BUTTON_LEFT)) {

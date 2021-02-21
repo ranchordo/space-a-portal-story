@@ -55,7 +55,7 @@ public abstract class Thing implements Serializable {
 	};
 	public static void runRayTest() {
 		rayTest=new ArrayList<LocalRayResult>();
-		Vector3f pt=new Vector3f(0,0,-1);
+		Vector3f pt=new Vector3f(0,0,-2);
 		Matrix3f rs=new Matrix3f();
 		Renderer.camera.getTransform().getMatrix(new Matrix4f()).getRotationScale(rs);
 //		try {

@@ -208,7 +208,7 @@ public class Funnel extends Thing {
 		this.funnelgeo=new GObject();
 		this.funnelgeo.loadOBJ("funnel/beam");
 		this.funnelgeo.lock();
-		this.funnelgeo.useLighting=true;
+		this.funnelgeo.useLighting=false;
 		this.funnelgeo.useCulling=false;
 		this.funnelgeo.setColor(0f,0f,2.0f,0.2f);
 		this.funnelgeo.useTex=false;

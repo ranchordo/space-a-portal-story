@@ -4,6 +4,7 @@
 #define MAX_LIGHTS 50
 
 layout (location = 0) out vec4 FragColor;
+layout (location = 3) out vec4 gAOMul;
 
 varying vec2 texCoords;
 varying vec4 col;
@@ -217,4 +218,5 @@ void main() {
 		val=texCoords.y*noiseval*(0.6+max(sin(160.0*pi*texCoords.x)-0.7,0)*(1.0/(1-0.7)));
 	}
 	FragColor=vec4(fcol.xyz,min(val+0.5*noiseval2*texCoords.y,1)*fcol.w);//vec4(((normal/2.0)+0.5)*0.15,1);
+	gAOMul=vec4(0,0,0,0);
 }

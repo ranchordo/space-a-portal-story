@@ -94,7 +94,7 @@ public class Door extends Thing {
 		stepGObject(doorcr);
 		stepGObject(doorcl);
 		pGotActivation=(this.activations>=this.activationThreshold);
-		useModifiedCollision=pGotActivation;
+		useModifiedCollision=true;//pGotActivation;
 	}
 	private void stepGObject(GObject in) {
 		in.animator.synchronizedTransform.set(in.transformObject.getTransform());

@@ -13,7 +13,7 @@ public class BloomHandler {
 	public static FrameBuffer fbo2;
 	public static void update() {
 		screen=new Screen();
-		blurShader=new Shader("blur");
+		blurShader=new Shader("specific/blur");
 		fbo2=new FrameBuffer(0);
 	}
 	public static void init() {

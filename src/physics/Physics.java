@@ -392,6 +392,7 @@ public class Physics {
 				if(!thing.useModifiedCollision) {continue;}
 				if(thing.runCollisionRayTest(pos)) {
 					npflag=true;
+					thing.npflag2=true;
 				} else {
 				}
 			}

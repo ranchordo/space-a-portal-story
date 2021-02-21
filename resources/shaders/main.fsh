@@ -6,7 +6,7 @@
 layout (location = 0) out vec4 FragColor;
 layout (location = 1) out vec4 gPosition;
 layout (location = 2) out vec4 gNormal;
-layout (location = 3) out vec4 gAlbedo;
+layout (location = 3) out vec4 gAOMul;
 
 uniform int types[MAX_LIGHTS]=int[MAX_LIGHTS](0);
 uniform vec3 prop[MAX_LIGHTS]=vec3[MAX_LIGHTS](vec3(0,0,0));
@@ -40,6 +40,7 @@ void main() {
 		//normal=TBN * normal_tex;
 		//normal=normal+1.0f;
 	}
+	vec3 ambient=vec3(0,0,0);
 	if(useLighting>=1) {
 		for(int i=0;i<MAX_LIGHTS;i++) {
 			if(types[i]==0) {
@@ -47,6 +48,7 @@ void main() {
 			} else if(types[i]==1) {
 				//Ambient light
 				intensity_in=intensity_in+vec4(intensities[i].xyz,0);
+				ambient+=intensities[i].xyz;
 			} else if(types[i]==2) {
 				//Directional light
 				vec3 lightVector=normalize(prop[i]);
@@ -79,12 +81,12 @@ void main() {
 	}
 	
 	FragColor=fcol;//vec4(((normal/2.0)+0.5)*0.15,1);
-	gPosition=vec4(view_position,1.0);
+	gPosition=vec4(view_position,fcol.w);
 	mat3 w2v_mat3=mat3(world2view);
-	gNormal=vec4(normalize(w2v_mat3*normal),1.0);
-	vec4 albedo=col;
-	if(useTextures>=1) {
-		albedo=albedo*tcol;
+	gNormal=vec4(normalize(w2v_mat3*normal),fcol.w);
+	vec3 noamb=(fcol*((intensity_in-vec4(ambient,0))/intensity_in)).xyz;
+	if(useLighting<1) {
+		noamb=fcol.xyz;
 	}
-	gAlbedo=vec4(albedo.xyz,1.0);
+	gAOMul=vec4(fcol.xyz-noamb,1.0);
 }

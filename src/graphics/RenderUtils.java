@@ -118,14 +118,10 @@ public class RenderUtils {
 		Logger.log(0,"Resolution: "+winW+"x"+winH);
 		Logger.log(0,"Refresh rate / target frame rate: "+targ_fr+"Hz");
 		long win;
-		//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-		//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-		//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		if(fullscreen) {
-			win=glfwCreateWindow(winW,winH,"Portal bleh",glfwGetPrimaryMonitor(),prevwin);
+			win=glfwCreateWindow(winW,winH,"Space: A Portal Story",glfwGetPrimaryMonitor(),prevwin);
 		} else {
-			win=glfwCreateWindow(windowedW,windowedH,"Portal bleh",0,prevwin);
+			win=glfwCreateWindow(windowedW,windowedH,"Space: A Portal Story",0,prevwin);
 			winW=windowedW;
 			winH=windowedH;
 		}

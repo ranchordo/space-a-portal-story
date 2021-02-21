@@ -14,6 +14,5 @@ public class GraphicsInit {
 		player.init();
 		player.addPhysics(Thing.PLAYER,Thing.PLAYER);
 		Renderer.things.add(player);
-		//((Player)player).setGodMode(true);
 	}
 }
