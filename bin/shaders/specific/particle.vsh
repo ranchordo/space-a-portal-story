@@ -1,28 +1,33 @@
-#version 120
+#version 330 core
 #define pi 3.1415926535897932384
-#define MAX_LIGHTS 50
 
-uniform int types[MAX_LIGHTS]=int[MAX_LIGHTS](0);
-uniform vec3 prop[MAX_LIGHTS]=vec3[MAX_LIGHTS](vec3(0,0,0));
-uniform vec4 intensities[MAX_LIGHTS]=vec4[MAX_LIGHTS](vec4(0,0,0,1));
-uniform mat3 view_matrix=mat3(1.0);
+
 uniform mat4 master_matrix=mat4(1.0);
-uniform float useLighting=2;
+uniform mat4 world2view=mat4(1.0);
+uniform mat4 proj_matrix=mat4(1.0);
 uniform float altValue=0.15;
+uniform float useLighting=2;
 
-varying vec4 intensity;
-varying vec4 ft;
+attribute vec3 glv;
+attribute vec3 gln;
+attribute vec4 glc;
+attribute vec2 mtc0;
+attribute vec4 material;
+
 varying vec2 texCoords;
 varying vec4 col;
 varying vec3 world_position;
+varying vec3 normal_orig;
+varying vec3 campos;
+varying vec4 intensity;
 void main() {
-	ft=ftransform();
-	gl_Position=ft;
-	texCoords=gl_MultiTexCoord0.st;
-	intensity=vec4(0,0,0,1);
-	world_position=(master_matrix*gl_Vertex).xyz;
+	campos=(inverse(world2view)[3]).xyz;
+	mat4 mvp=proj_matrix*world2view*master_matrix;
+	gl_Position=mvp*vec4(glv,1.0);
+	texCoords=mtc0.st;
+	world_position=(master_matrix*vec4(glv,1.0)).xyz;
 	if(useLighting<1) {
 		intensity=vec4(altValue,altValue,altValue,1);
 	}
-	col=gl_Color;//vec4(((tangent/2.0)+0.5)*0.15,1);
+	col=glc;
 }

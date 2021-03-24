@@ -4,15 +4,14 @@ import static org.lwjgl.opengl.GL32.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
 import lighting.Lighting;
 import logger.Logger;
+import util.ShaderDataCompatible;
 
-public class Shader {
+public class Shader extends ShaderDataCompatible {
 	public static HashMap<String, Integer> defaults=new HashMap<String, Integer>();
 	public static void defaultInit() {
 		defaults.put("tex",0);
@@ -40,10 +39,12 @@ public class Shader {
 	public Shader(String fname) {
 		this.fname=fname;
 		program=glCreateProgram();
+		syncRequiredShaderDataValues(program, IGNORE_MISSING);
 		vs=glCreateShader(GL_VERTEX_SHADER);
 		glShaderSource(vs, readFile(fname+".vsh"));
 		glCompileShader(vs);
 		if(glGetShaderi(vs, GL_COMPILE_STATUS) != 1) {
+			System.err.println("In "+fname+".vsh: ");
 			System.err.println(glGetShaderInfoLog(vs));
 			System.exit(1);
 		}
@@ -52,8 +53,9 @@ public class Shader {
 		glShaderSource(fs, readFile(fname+".fsh"));
 		glCompileShader(fs);
 		if(glGetShaderi(fs, GL_COMPILE_STATUS) != 1) {
+			System.err.println("In "+fname+".fsh: ");
 			System.err.println(glGetShaderInfoLog(fs));
-			System.exit(1);
+			System.exit(2);
 		}
 		
 		glAttachShader(program,vs);
@@ -66,8 +68,9 @@ public class Shader {
 			glShaderSource(gs,geoShader);
 			glCompileShader(gs);
 			if(glGetShaderi(gs, GL_COMPILE_STATUS) != -1) {
+				System.err.println("In "+fname+".gsh: ");
 				System.err.println(glGetShaderInfoLog(gs));
-				System.exit(1);
+				System.exit(3);
 			}
 			glAttachShader(program,gs);
 		}
@@ -91,92 +94,9 @@ public class Shader {
 			System.exit(1);
 		}
 	}
-	public int getUniformLocation(String name) {
-		if(locationCache.containsKey(name)) {
-			return locationCache.get(name);
-		}
-		int ret=glGetUniformLocation(program,name);
-		locationCache.put(name,ret);
-		return ret;
-	}
-	public void setUniform1f(String name, float value) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform1f(location,value);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform1i(String name, int value) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform1i(location,value);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform3f(String name, float x, float y, float z) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform3f(location,x,y,z);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform4f(String name, float x, float y, float z, float w) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform4f(location,x,y,z,w);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform3fv(String name, FloatBuffer d) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform3fv(location, d);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniformiv(String name, IntBuffer d) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform1iv(location, d);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform4fv(String name, FloatBuffer d) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform4fv(location, d);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniformMatrix4fv(String name, FloatBuffer b) {
-		setUniformMatrix4fv(name,b,false);
-	}
-	public void setUniformMatrix4fv(String name, FloatBuffer b, boolean transpose) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniformMatrix4fv(location, transpose, b);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-
-	public void setUniformMatrix3fv(String name, FloatBuffer b) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniformMatrix3fv(location, false, b);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
 	private static boolean checkActiveShaderName(String tfname) {
 		if(Renderer.activeShader==null) {return true;}
+		if(Renderer.shaderSwitch!=Renderer.GRAPHICAL_SHADER) {return true;}
 		return !tfname.equals(Renderer.activeShader.getFname());
 	}
 	public void bind() {
@@ -188,6 +108,7 @@ public class Shader {
 				if(loc!=-1) {glUniform1i(loc,e.getValue());}
 			}
 			Renderer.activeShader=this;
+			Renderer.shaderSwitch=Renderer.GRAPHICAL_SHADER;
 			Lighting.apply();
 		}
 	}

@@ -130,6 +130,9 @@ public abstract class Thing implements Serializable {
 	public boolean useModifiedCollision=false;
 	public boolean runCollisionRayTest(Vector3f pos) {return false;}
 	public void setAttachedNPCollisionFlag(boolean in) {}
+	public ArrayList<GObject> getResources() {
+		return resources;
+	}
 	public void declareResource(GObject g) {
 		if(g==null) {return;}
 		resources.add(g);

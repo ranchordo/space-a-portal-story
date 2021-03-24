@@ -67,10 +67,10 @@ public class Texture {
 		normLoaded=true;
 		Logger.log(0,"Found normal map "+fname);
 	}
-	public void upload() {
-		color.upload();
-		if(bumpLoaded && normLoaded) {norm.upload();}// bump.upload();}
-	}
+//	private void upload() {
+//		color.upload();
+//		if(bumpLoaded && normLoaded) {norm.upload();}// bump.upload();}
+//	}
 	public void bind() {
 		color.bind();
 		if(bumpLoaded && normLoaded) {norm.bind();}// bump.bind();}

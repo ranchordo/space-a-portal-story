@@ -3,13 +3,13 @@ package pooling;
 import graphics.RenderUtils;
 
 public class PoolElement<T> {
-	public long tmout=-1;
+	public long tmout=-1; //Timeout while alive
 	private boolean used=false;
-	private long lastToggle;
-	private T o;
-	public Object mdo=null; //MiscDataObject
+	private long lastToggle; //microseconds
+	private T o; //o? Why o? Idk. That's the internal object, though
+	public Object mdo=null; //Just some misc data
 	public void free() {setUsed(false);}
-	public PoolElement(T no) {
+	public PoolElement(T no) { //no -> new object
 		o=no;
 		lastToggle=RenderUtils.micros();
 	}

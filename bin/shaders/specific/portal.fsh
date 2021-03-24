@@ -4,7 +4,6 @@
 #define MAX_LIGHTS 50
 
 layout (location = 0) out vec4 FragColor;
-layout (location = 3) out vec4 gAOMul;
 
 varying vec2 texCoords;
 varying vec4 col;
@@ -212,5 +211,4 @@ void main() {
 	float noiseval=cnoise(vec3(offset+16.0*texCoords.x,16.0*texCoords.y,offset+millis/1000000.0));
 	noiseval=(1-squeeze)+noiseval*squeeze;
 	FragColor=vec4(noiseval*fcol.xyz,1.0+block*(fcol.w-1.0));//vec4(((normal/2.0)+0.5)*0.15,1);
-	gAOMul=vec4(0,0,0,0);
 }

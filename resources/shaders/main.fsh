@@ -4,9 +4,9 @@
 #define MAX_LIGHTS 50
 
 layout (location = 0) out vec4 FragColor;
-layout (location = 1) out vec4 gPosition;
-layout (location = 2) out vec4 gNormal;
-layout (location = 3) out vec4 gAOMul;
+//layout (location = 1) out vec4 gPosition;
+//layout (location = 2) out vec4 gNormal;
+//layout (location = 3) out vec4 gAOMul;
 
 uniform int types[MAX_LIGHTS]=int[MAX_LIGHTS](0);
 uniform vec3 prop[MAX_LIGHTS]=vec3[MAX_LIGHTS](vec3(0,0,0));
@@ -81,12 +81,12 @@ void main() {
 	}
 	
 	FragColor=fcol;//vec4(((normal/2.0)+0.5)*0.15,1);
-	gPosition=vec4(view_position,fcol.w);
-	mat3 w2v_mat3=mat3(world2view);
-	gNormal=vec4(normalize(w2v_mat3*normal),fcol.w);
-	vec3 noamb=(fcol*((intensity_in-vec4(ambient,0))/intensity_in)).xyz;
-	if(useLighting<1) {
-		noamb=fcol.xyz;
-	}
-	gAOMul=vec4(fcol.xyz-noamb,1.0);
+	//gPosition=vec4(view_position,fcol.w);
+	//mat3 w2v_mat3=mat3(world2view);
+	//gNormal=vec4(normalize(w2v_mat3*normal),fcol.w);
+	//vec3 noamb=(fcol*((intensity_in-vec4(ambient,0))/intensity_in)).xyz;
+	//if(useLighting<1) {
+	//	noamb=fcol.xyz;
+	//}
+	//gAOMul=vec4(fcol.xyz-noamb,1.0);
 }

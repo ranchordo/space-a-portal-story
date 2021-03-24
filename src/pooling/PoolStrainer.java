@@ -5,7 +5,7 @@ import java.util.HashSet;
 import graphics.RenderUtils;
 import logger.Logger;
 
-public class PoolStrainer {
+public class PoolStrainer { //Strain through the active pools looking for old elements.
 	public static long CLEAN_PERIOD=10000000;
 	public static HashSet<AbstractObjectPool<?>> activePools=new HashSet<AbstractObjectPool<?>>();
 	private static long lastClean=0;
@@ -16,7 +16,7 @@ public class PoolStrainer {
 		}
 		return r;
 	}
-	public static void clean() {
+	public static void clean() { //Call this however often you want. This will clean every CLEAN_PERIOD us if you run this very often.
 		if(CLEAN_PERIOD<=0) {
 			return;
 		}

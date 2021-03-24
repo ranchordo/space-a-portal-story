@@ -1,0 +1,107 @@
+#version 430 core
+#define EPSILON 0.0000001
+#define zDist 1.0
+
+layout(local_size_x = 1, local_size_y = 1) in;
+layout(rgba16f, binding = 0, location = 0) uniform image2D img_output;
+
+struct Triangle {
+	vec3 v0;
+	vec3 v1;
+	vec3 v2;
+	float modelMatrixID;
+	float filler1;
+	float filler2;
+	float filler3;
+};
+
+layout (std140) buffer geo_data {
+	Triangle tris[];
+};
+layout (std140) buffer mat_data {
+	mat4 model[];
+};
+layout (std140) buffer narray_data {
+	mat4 world2view;
+};
+
+uniform vec3 invocation_dimensions;
+
+
+struct box {
+  vec3 min;
+  vec3 max;
+};
+
+vec2 intersectBox(vec3 origin, vec3 dir, const box b) {
+  vec3 tMin = (b.min - origin) / dir;
+  vec3 tMax = (b.max - origin) / dir;
+  vec3 t1 = min(tMin, tMax);
+  vec3 t2 = max(tMin, tMax);
+  float tNear = max(max(t1.x, t1.y), t1.z);
+  float tFar = min(min(t2.x, t2.y), t2.z);
+  return vec2(tNear, tFar);
+}
+
+float mt(vec3 v0, vec3 v1, vec3 v2, vec3 rayOrigin, vec3 rayVector) {
+	bool ret=true;
+	vec3 edge1=v1-v0;
+	vec3 edge2=v2-v0;
+	vec3 h=cross(rayVector,edge2);
+	float a=dot(edge1,h);
+	ret=ret && !(a>-EPSILON && a<EPSILON);
+	float f=1.0/a;
+	vec3 s=rayOrigin-v0;
+	float u=f*dot(s,h);
+	ret=ret && !(u<0.0 || u>1.0);
+	vec3 q=cross(s,edge1);
+	float v=f*dot(rayVector,q);
+	ret=ret && !(v<0.0 || (u+v)>1.0);
+	float t=f*dot(edge2,q);
+	ret=ret && (t>EPSILON);
+	return int(ret)*t + int(!ret)*-1;
+}
+
+Triangle tritr(Triangle i, mat4 m) {
+	return Triangle(vec3(m*vec4(i.v0,1.0)),vec3(m*vec4(i.v1,1.0)),vec3(m*vec4(i.v2,1.0)),i.modelMatrixID,0.0,0.0,0.0);
+}
+
+vec3 findPixelColor(vec3 origin, vec3 direc, int recursionDepth) {
+	if(recursionDepth>3) {
+		return vec3(0,0,0);
+	}
+	bool hit=false;
+	float minDist=9999;
+	float id=0;
+	for(int i=0;i<4;i++) {
+		Triangle tri=tritr(tris[i],model[int(tris[i].modelMatrixID)]);
+		float dist=mt(tri.v0,tri.v1,tri.v2,origin,direc);
+		float pMinDist=minDist;
+		minDist=min(minDist,dist+(9999.0*int(dist<=EPSILON)));
+		hit=hit || (dist>EPSILON);
+		bool changed=pMinDist!=minDist;
+		float newID=tris[i].modelMatrixID;
+		id=int(changed)*newID+int(!changed)*id;
+	}
+	minDist/=5;
+	minDist=min(minDist,1);
+	return vec3(id*int(hit)*minDist,int(hit)*minDist,int(hit)*minDist);
+}
+
+void main() {
+	box testBox=box(vec3(-1,-1,-1),vec3(1,1,1));
+	ivec2 pixel_coords=ivec2(gl_GlobalInvocationID.xy);
+	float angPerPixel=radians(70.0)/invocation_dimensions.y;
+	vec2 ang_coords=(gl_GlobalInvocationID.xy-(0.5*invocation_dimensions.xy))*2/invocation_dimensions.xy;//angPerPixel;
+	//vec3 controlPoint=vec3(zDist*tan(ang_coords.x),zDist*tan(ang_coords.y),-zDist);
+	vec3 controlPoint=vec3(ang_coords,-1.0);
+	//controlPoint=(inverse(world2view)*vec4(controlPoint,1.0)).xyz;
+	controlPoint=inverse(mat3(world2view))*controlPoint;
+	vec3 campos=(inverse(world2view)[3]).xyz;
+	//controlPoint=normalize(controlPoint)+campos;
+	//controlPoint+=campos;
+	vec2 lambda = intersectBox(campos,controlPoint,testBox);
+	bool hit = lambda.x > 0.0 && lambda.x < lambda.y;
+	vec3 pixColor=0.15*findPixelColor(campos, controlPoint, 0);
+	imageStore(img_output, pixel_coords, vec4(pixColor,1));
+}

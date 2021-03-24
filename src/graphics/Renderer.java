@@ -7,10 +7,12 @@ import static org.lwjgl.opengl.GL46.*;
 //import static org.lwjgl.openvr.VRSystem.*;
 import static org.lwjgl.system.MemoryStack.*;
 
+import org.lwjgl.BufferUtils;
 //import org.lwjgl.openvr.OpenVR;
 import org.lwjgl.system.*;
 
 import java.awt.Color;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,6 +29,7 @@ import audio.Audio;
 import chamber.Chamber;
 import game.SaveState;
 import graphics.handlers.BloomHandler;
+import graphics.handlers.RTXDataCoordinator;
 import graphics.handlers.SSAOHandler;
 import lighting.Light;
 import lighting.Lighting;
@@ -46,6 +49,8 @@ import util.TextureCache;
 import util.Util;
 
 public class Renderer {
+	public static final int COMPUTE_SHADER=0x87;
+	public static final int GRAPHICAL_SHADER=0x88;
 	public static long activeWindow;
 	public static ArrayList<Thing> things=new ArrayList<Thing>();
 	public static ArrayList<Thing> addSched=new ArrayList<Thing>();
@@ -53,11 +58,13 @@ public class Renderer {
 	public static boolean vr=false;
 	public static boolean useGraphics=true;
 	public static Texture activeTex=null;
+	public static TextureArray activeTexArray=null;
 	public static TextureCache activeCache=new TextureCache();
 	public static Chamber activeChamber=new Chamber();
 	public static State camera=new State();
 	public static Shader activeShader=null;
 	public static ComputeShader activeComputeShader=null;
+	public static int shaderSwitch=GRAPHICAL_SHADER;
 	public static String dbg;
 	public static Transform camtr=new Transform();
 	public static Shader main;
@@ -133,7 +140,6 @@ public class Renderer {
 		IntBuffer testAv=stack.mallocInt(1);
 		glGetIntegerv(0x9048,testAv);
 		
-		System.out.println(testAv.get(0));
 		
 		float inte=10f;
 		float r=255/255.0f;
@@ -147,27 +153,27 @@ public class Renderer {
 		
 		//PUT CHAMBER CONTENTS HERE:
 		//hld=test.add(new Door(new Vector3f(9.7f,0.2f,5),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),false));
-		test.add(new FaithPlate(new Vector3f(4,0.04f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),new Vector3f(0,20,0)));
+		//test.add(new FaithPlate(new Vector3f(4,0.04f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),new Vector3f(0,20,0)));
 		test.add(new Wall(new Vector2f(50,10), new Vector3f(0,0,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
+		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
 		//((Door)hld).setAttached(test.add(new Wall(new Vector2f(10,10), new Vector3f(10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90))))));
 		//test.add(new Fizzler(new Vector2f(2,2), new Vector3f(5,2,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90)))));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(-10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(270)))));
 		//test.add(new Cube(new Vector3f(0,1,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),2));
-		test.add(new Cube(new Vector3f(0,2,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
-		test.add(new Cube(new Vector3f(0,3,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
+		//test.add(new Cube(new Vector3f(0,2,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
+		//test.add(new Cube(new Vector3f(0,3,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
 		//test.add(new Shooter(new Vector3f(-1,5.15f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270))),40000,true));
 		//hld=test.add(new ConnectionFilter().addToActivates(hld));
 		//hld=test.add(new Laser(new Vector3f(0,0.2f,1),Util.AxisAngle_np(new AxisAngle4f())));
 		//test.add(new FloorButton(new Vector3f(2,0.8f,0),Util.AxisAngle_np(new AxisAngle4f(1,0,0,0))).addToActivates(hld));
 		//test.add(new Trigger(new Vector3f(1,1,1),Util.AxisAngle_np(new AxisAngle4f()),new Vector3f(0,1,0)));
-		test.add(new Funnel(new Vector3f(-4,0.27f,-6),Util.AxisAngle_np(new AxisAngle4f())));
+		//test.add(new Funnel(new Vector3f(-4,0.27f,-6),Util.AxisAngle_np(new AxisAngle4f())));
 		//test.add(new LightBridge(new Vector3f(9,5f,1),Util.AxisAngle_np(new AxisAngle4f(0,0,1,(float)Math.toRadians(90)))));
-		test.add(new Turret(new Vector3f(0,1.2f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
+		//test.add(new Turret(new Vector3f(0,1.2f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
 		//test.add(new ParticleSystem(new Vector3f(5,1.2f,-6), new Color(100,100,100,20), new Vector3f(0.2f,2,0.2f), 0.5f, 0.6f, 5000, new Vector3f(0,1,0), new Vector3f(0.02f,0.02f,0.02f), false, 0) {});
-		//test.add(new ParticleSystem(new Vector3f(5,1.2f,-6), new Color(242, 145, 53, 20), new Vector3f(0.2f,2,0.2f), 1, 0.2f, 1000, new Vector3f(0,0.4f,0), new Vector3f(0.02f,0.02f,0.02f), false, 0) {});
+		//test.add(new ParticleSystem(new Vector3f(0,1.2f,0), new Color(242, 145, 53, 20), new Vector3f(0.2f,2,0.2f), 100, 0.2f, 1000, new Vector3f(0,0.4f,0), new Vector3f(0.02f,0.02f,0.02f), false, 0) {});
 		test.add(new LightingConfiguration(
 				new Light(Light.LIGHT_POSITION,-9,7,-9, inte*r,inte*g,inte*b,1),
 				new Light(Light.LIGHT_POSITION,-9,7,9, inte*r,inte*g,inte*b,1),
@@ -193,13 +199,16 @@ public class Renderer {
 		Shader screen=new Shader("screen");
 		Shader screen_basic=new Shader("screen_basic");
 		Screen blindfold=new Screen();
+		ComputeShader rtx=new ComputeShader("rtx");
 		main.bind();
 		FrameBuffer fbo=new FrameBuffer(16,4,GL_RGBA16F);
 		FrameBuffer interfbo=new FrameBuffer(0,2,GL_RGBA16F);
 		FrameBuffer ssaoFBO=new FrameBuffer(0);
+		FrameBuffer RTXFBO=new FrameBuffer(0);
 		FrameBuffer ssaoMulFBO=new FrameBuffer(0);
 		FrameBuffer interfbo2=new FrameBuffer(0,2,GL_RGBA8);
 		FrameBuffer interfbo3=new FrameBuffer(0,1,GL_RGBA8);
+		activeTexArray=new TextureArray();
 		camera.position(0.0f,Player.height,0.0f);
 //		Lighting.addLight(new Light(Light.LIGHT_DIRECTION,0,1,0, 0.8f,0.8f,0.8f,1));
 //		Lighting.addLight(new Light(Light.LIGHT_DIRECTION,0,-1,0, 0.2f,0.2f,0.2f,1));
@@ -277,23 +286,44 @@ public class Renderer {
 //				thing.refresh();
 //			}
 //			pp.refresh();
-			pp.apply();
-			for(Thing thing : things) { //Render step
-				renderRoutine(thing,0);
-			}
-			for(Thing thing : things) { //Render step
-				alphaRenderRoutine(thing,0);
-			}
-			pp.alphaRender();
-			glStencilFunc(GL_ALWAYS,128,0xFF);
-			//renderRoutine(pp,0);
-			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+			//RENDER:
+//			pp.apply();
+//			for(Thing thing : things) { //Render step
+//				renderRoutine(thing,0);
+//			}
+//			for(Thing thing : things) { //Render step
+//				alphaRenderRoutine(thing,0);
+//			}
+//			pp.alphaRender();
+//			glStencilFunc(GL_ALWAYS,128,0xFF);
+//			//renderRoutine(pp,0);
+//			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+//			END
+			RTXFBO.bind();
+			glClearColor(0,0,0,1);
+			glClear(GL_COLOR_BUFFER_BIT);
+			RTXFBO.bindImage(0);
+			rtx.bind();
+			RTXDataCoordinator.handleSSBOData(rtx);
+			rtx.applyAllSSBOs();
+			rtx.dispatch(winW,winH,1);
+			
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			
 			glClearStencil(128);
 			glPopMatrix();
 			
-			SSAOHandler.runSSAOTo(fbo,1,2,ssaoFBO,0);
+			glDisable(GL_DEPTH_TEST);
+			FrameBuffer.unbind_all();
+			fbo.bind();
+			screen_basic.bind();
+			RTXFBO.bindTexture(0);
+			blindfold.render();
+			glEnable(GL_DEPTH_TEST);
+			
+			//SSAOHandler.runSSAOTo(fbo,1,2,ssaoFBO,0);
 			fbo.blitTo(interfbo,0,0);
-			fbo.blitTo(ssaoMulFBO,3,0);
+			//fbo.blitTo(ssaoMulFBO,3,0);
 			interfbo2.bind();
 			glClearColor(1,1,0,1);
 			glClear(GL_COLOR_BUFFER_BIT);

@@ -234,7 +234,7 @@ public class Player extends Thing {
 	public void logic() {
 		geo.body.getLinearVelocity(linvel);
 		linvel.set(linvel.x,0,linvel.z);
-		System.out.println(linvel.length());
+		//System.out.println(linvel.length());
 		//System.out.println(npflag+"1, "+npflag2+"2, "+portalingCollisionsEnabled+"col");
 		//if(inverseTransform==null) {inverseTransform=new Matrix4f();}
 		if(in.mr(GLFW_MOUSE_BUTTON_LEFT)) {

@@ -85,15 +85,13 @@ public class Particle {
 		angle=player_local.angle(normal);
 		axis.normalize();
 //		//System.out.println(axis+",    "+angle);
-		glPushMatrix();
 		PoolElement<Matrix4f> mm_mat=Pools.matrix4f.alloc();
 		PoolElement<AxisAngle4f> aa4f=Pools.axisAngle4f.alloc();
 		aa4f.o().set(axis.x,axis.y,axis.z,-angle);
 		PoolElement<Quat4f> q=Util.AxisAngle(aa4f.o());
 		mm_mat.o().set(q.o(),p,1);
 		mm.set(mm_mat.o());
-		e.geo.highRender_noPushPop_customTransform(mm);
-		glPopMatrix();
+		//e.geo.highRender_noPushPop_customTransform(mm);
 		mm_mat.free();
 		aa4f.free();
 		q.free();

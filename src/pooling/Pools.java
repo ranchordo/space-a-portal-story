@@ -8,7 +8,7 @@ import javax.vecmath.Vector4f;
 
 import com.bulletphysics.linearmath.Transform;
 
-public class Pools {
+public class Pools { //These are the pools that I use for my specific project. This is mostly packaged along for an example on new pools.
 	public static ObjectPool<Vector3f> vector3f=new ObjectPool<Vector3f>("Vector3f",new PoolInitCreator_clone<Vector3f>(new Vector3f()));
 	public static ObjectPool<Vector4f> vector4f=new ObjectPool<Vector4f>("Vector4f",new PoolInitCreator_clone<Vector4f>(new Vector4f()));
 	public static ObjectPool<AxisAngle4f> axisAngle4f=new ObjectPool<AxisAngle4f>("AxisAngle4f",new PoolInitCreator_clone<AxisAngle4f>(new AxisAngle4f()));
@@ -19,13 +19,6 @@ public class Pools {
 		public Transform allocateInitValue() {
 			return new Transform();
 		}});
-//	public static ObjectPool<FloatBuffer> floatBuffer=new ObjectPool<FloatBuffer>("FloatBuffer",new PoolInitCreator<FloatBuffer>() {
-//		@Override
-//		protected FloatBuffer allocateInitValue() {
-//			return null;
-//		}
-//	});
-//	public static ObjectPool<IntBuffer> intBuffer=new ObjectPool<IntBuffer>("IntBuffer",new Matrix4f());
 	public static <T1,T2> LinkedPoolElement<T2> alloc_linked(AbstractObjectPool<T1> p) {
 		return new LinkedPoolElement<T2>(p.alloc());
 	}

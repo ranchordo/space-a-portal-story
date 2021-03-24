@@ -4,33 +4,32 @@ import static org.lwjgl.opengl.GL43.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
+import javax.vecmath.Vector3f;
+import javax.vecmath.Vector4f;
+
+import org.lwjgl.system.MemoryStack;
+
 import graphics.Renderer;
-import lighting.Lighting;
 import logger.Logger;
 
-public class ComputeShader {
-	public static HashMap<String, Integer> defaults=new HashMap<String, Integer>();
-	public static void defaultInit() {
-		
-		defaultsInited=true;
-	}
-	private static boolean defaultsInited=false;
-	public static final boolean IGNORE_MISSING=true;
+public class ComputeShader extends ShaderDataCompatible {
+	public static final boolean IGNORE_MISSING=false;
 	private int program;
 	private int cs;
 	private String fname;
 	public String getFname() {return fname;}
-	public HashMap<String,Integer> locationCache=new HashMap<String,Integer>();
 	public ComputeShader(String fname) {
 		this.fname=fname;
 		program=glCreateProgram();
+		syncRequiredShaderDataValues(program, IGNORE_MISSING);
 		cs=glCreateShader(GL_COMPUTE_SHADER);
-		glShaderSource(cs, readFile(fname+".csh"));
+		glShaderSource(cs, readFile(fname+".cpsh"));
 		glCompileShader(cs);
 		if(glGetShaderi(cs, GL_COMPILE_STATUS) != 1) {
 			System.err.println(glGetShaderInfoLog(cs));
@@ -50,107 +49,38 @@ public class ComputeShader {
 			System.exit(1);
 		}
 	}
-	public int getUniformLocation(String name) {
-		if(locationCache.containsKey(name)) {
-			return locationCache.get(name);
+	private static Vector4f ret=new Vector4f();
+	private static boolean gotLimits=false;
+	public static Vector4f getGlobalWorkLimits() {
+		if(!gotLimits) {
+			gotLimits=true;
+			try(MemoryStack stack=MemoryStack.stackPush()){
+				IntBuffer x=Renderer.stack.mallocInt(1);
+				IntBuffer y=Renderer.stack.mallocInt(1);
+				IntBuffer z=Renderer.stack.mallocInt(1);
+				IntBuffer w=Renderer.stack.mallocInt(1);
+				glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,0,x);
+				glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,1,y);
+				glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,2,z);
+				glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS,w);
+				ret.set(x.get(0),y.get(0),z.get(0),w.get(0));
+				return ret;
+			}
 		}
-		int ret=glGetUniformLocation(program,name);
-		locationCache.put(name,ret);
 		return ret;
-	}
-	public void setUniform1f(String name, float value) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform1f(location,value);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform1i(String name, int value) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform1i(location,value);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform3f(String name, float x, float y, float z) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform3f(location,x,y,z);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform4f(String name, float x, float y, float z, float w) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform4f(location,x,y,z,w);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform3fv(String name, FloatBuffer d) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform3fv(location, d);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniformiv(String name, IntBuffer d) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform1iv(location, d);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniform4fv(String name, FloatBuffer d) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniform4fv(location, d);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-	public void setUniformMatrix4fv(String name, FloatBuffer b) {
-		setUniformMatrix4fv(name,b,false);
-	}
-	public void setUniformMatrix4fv(String name, FloatBuffer b, boolean transpose) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniformMatrix4fv(location, transpose, b);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
-	}
-
-	public void setUniformMatrix3fv(String name, FloatBuffer b) {
-		int location=getUniformLocation(name);
-		if(location!=-1) {
-			glUniformMatrix3fv(location, false, b);
-		} else {
-			if(!IGNORE_MISSING) {Logger.log(3,name+" is not a valid shader uniform");}
-		}
 	}
 	private static boolean checkActiveShaderName(String tfname) {
 		if(Renderer.activeComputeShader==null) {return true;}
+		if(Renderer.shaderSwitch!=Renderer.COMPUTE_SHADER) {return true;}
 		return !tfname.equals(Renderer.activeComputeShader.getFname());
 	}
 	public void bind() {
-		if(!defaultsInited) {defaultInit();}
 		if(checkActiveShaderName(this.fname)) {
 			glUseProgram(program);
-			for(Entry<String, Integer> e : ComputeShader.defaults.entrySet()) {
-				int loc=getUniformLocation(e.getKey());
-				if(loc!=-1) {glUniform1i(loc,e.getValue());}
-			}
 			Renderer.activeComputeShader=this;
-			Lighting.apply();
+			Renderer.shaderSwitch=Renderer.COMPUTE_SHADER;
 		}
 	}
-	
 	private String readFile(String fname) {
 		StringBuilder string=new StringBuilder();
 		BufferedReader b;
@@ -169,5 +99,12 @@ public class ComputeShader {
 			Logger.log(4,"/compute_shaders/"+fname+" does not exist.");
 		}
 		return string.toString();
+	}
+	public void dispatch(int w, int h, int d) {
+		if((w>getGlobalWorkLimits().x)||(h>getGlobalWorkLimits().y)||(d>getGlobalWorkLimits().z)) {
+			throw new IllegalStateException("You are dispatching too many threads. Global 3d-structured limits are "+getGlobalWorkLimits()+". You called this with ("+w+", "+h+", "+d+").");
+		}
+		setUniform3f("invocation_dimensions",w,h,d);
+		glDispatchCompute(w,h,d);
 	}
 }

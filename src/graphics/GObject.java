@@ -99,7 +99,7 @@ public class GObject {
 	
 	private boolean rnp=false;
 	public void restrictNonPhysics() {rnp=true;}
-	private int transformSource=0;
+	private int transformSource=PHYSICS;
 	public void setMotionSource(int motionSource) {
 		if(!rnp) {
 			this.transformSource=motionSource;
@@ -111,6 +111,9 @@ public class GObject {
 		if(ret==null) {ret=new Transform();}
 		switch(transformSource) {
 		case PHYSICS:
+			if(body==null) {
+				return null;
+			}
 			body.getWorldTransform(ret);
 			return ret;
 		case ANIMATION:
@@ -207,7 +210,7 @@ public class GObject {
 	FloatBuffer tangent_data;
 	FloatBuffer bitangent_data;
 	private FloatBuffer handleBufferCreation(FloatBuffer buffer, float[] data) {
-		if(buffer==null) {
+		if(buffer==null || buffer.capacity()<data.length) {
 			buffer=BufferUtils.createFloatBuffer(data.length+12);
 		}
 		Util.asFloatBuffer(data,buffer);
@@ -430,6 +433,26 @@ public class GObject {
 		glPushMatrix();
 		highRender_noPushPop();
 		glPopMatrix();
+	}
+	public int getNumTris() {
+		return tris.size();
+	}
+	public static final int RTXVertexSize=16;
+	public FloatBuffer RTXAddVertexData(FloatBuffer in, int modelMatrixID) {
+		for(int i=0;i<tris.size();i++) {
+			Tri t=tris.get(i);
+			Vector3f v0=vmap.vertices.get(t.vertices[0]);
+			Vector3f v1=vmap.vertices.get(t.vertices[1]);
+			Vector3f v2=vmap.vertices.get(t.vertices[2]);
+			in.put(v0.x); in.put(v0.y); in.put(v0.z); in.put(2);
+			in.put(v1.x); in.put(v1.y); in.put(v1.z); in.put(2);
+			in.put(v2.x); in.put(v2.y); in.put(v2.z); in.put(modelMatrixID);
+			in.put(modelMatrixID);
+			in.put(1);
+			in.put(1);
+			in.put(1);
+		}
+		return in;
 	}
 	public boolean texUAL() {return useTex && vmap.tex.colorLoaded;}
 	public boolean texAV() {return vmap.texcoords.size()>0;}

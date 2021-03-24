@@ -17,6 +17,7 @@ public class FrameBuffer {
 	private int rbo; //Renderbuffer object
 	private int multiSample=-1;
 	private IntBuffer ib;
+	private int format;
 	public int getID(int id, int secID) {
 		switch(id) {
 		case FRAMEBUFFER:
@@ -55,6 +56,7 @@ public class FrameBuffer {
 			} else {
 				glTexImage2D(texParam,0,format,RenderUtils.winW,RenderUtils.winH,0,GL_RGBA,GL_FLOAT,(FloatBuffer)null);
 			}
+			this.format=format;
 			glTexParameteri(texParam,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
 			glTexParameteri(texParam,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 			glTexParameteri(texParam,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
@@ -139,5 +141,11 @@ public class FrameBuffer {
 	public void unbind() {
 		unbind_all();
 	}
-	
+	public void bindImage(int id) {
+		bindImage(id,GL_WRITE_ONLY);
+	}
+	public void bindImage(int id, int rwmode) {
+		bindTexture(id,0);
+		glBindImageTexture(0,tbo[id],0,false,0,rwmode,format);
+	}
 }

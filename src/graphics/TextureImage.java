@@ -15,8 +15,8 @@ public class TextureImage {
 	public int width;
 	public int height;
 	private ByteBuffer pixels;
-	
 	public BufferedImage bi;
+	
 	private Graphics initBI(BufferedImage input) { //Initialize internal BufferedImage with an input BI
 		bi=input;
 		Graphics g=bi.getGraphics();
@@ -29,13 +29,14 @@ public class TextureImage {
 		this.applyBI();
 	}
 	public TextureImage(int b) {
+		id=glGenTextures();
 		binding=b;
 		bi=null;
 		
 		width=0;
 		height=0;
 	}
-	public void applyBI() { //Convert the internal BI to a bytebuffer and upload
+	private void applyBI() { //Convert the internal BI to a bytebuffer and upload
 		int[] pixels_raw=new int[width*height*4];
 		pixels_raw=bi.getRGB(0, 0, width, height, null, 0, width);
 		pixels=BufferUtils.createByteBuffer(width*height*4);
@@ -51,11 +52,10 @@ public class TextureImage {
 		}
 		pixels.flip();
 		
-		id=glGenTextures();
 		upload();
 		
 	}
-	public void upload() {
+	private void upload() {
 		glActiveTexture(GL_TEXTURE0+binding);
 		glBindTexture(GL_TEXTURE_2D,id);
 		glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pixels);

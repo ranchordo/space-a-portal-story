@@ -95,7 +95,7 @@ public abstract class ParticleEmitter {
 			else {dead.add(particle);}
 		}
 		for(Particle deadParticle : dead) {
-			if(!particles.remove(deadParticle)) {Logger.log(2,"SmokeSimulation: Dead particle wasn't in particles hashmap.");}
+			if(!particles.remove(deadParticle)) {Logger.log(2,"ParticleSimulation: Dead particle wasn't in particles hashmap.");}
 			recycling.add(deadParticle); //Out with the old
 		}
 	}
@@ -107,7 +107,7 @@ public abstract class ParticleEmitter {
 		Lighting.apply();
 		glDepthMask(false);
 		for(Particle particle : particles) {
-			if(particle.alive) {particle.render();}
+			//if(particle.alive) {particle.render();}
 		}
 		glDepthMask(true);
 		prevShader.bind();
