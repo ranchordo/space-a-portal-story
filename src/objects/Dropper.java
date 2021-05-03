@@ -17,8 +17,9 @@ import javax.vecmath.Vector3f;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.Renderer;
+import objectTypes.GObject;
+import objectTypes.WorldObject;
 import util.Util;
 
 public class Dropper extends Thing {
@@ -26,10 +27,10 @@ public class Dropper extends Thing {
 	private static final long serialVersionUID = -6341205524711175965L;
 	private Vector3f origin;
 	private Quat4f quat;
-	private transient GObject p1;
-	private transient GObject p2;
-	private transient GObject p3;
-	private transient GObject stop;
+	private transient WorldObject p1;
+	private transient WorldObject p2;
+	private transient WorldObject p3;
+	private transient WorldObject stop;
 	
 	private float open=0;
 	private int cubeType;
@@ -44,33 +45,33 @@ public class Dropper extends Thing {
 	}
 	@Override
 	public void initVBO() {
-		geo.initVBO();
-		p1.initVBO();
-		p2.initVBO();
-		p3.initVBO();
+		geo.g.initVBO();
+		p1.g.initVBO();
+		p2.g.initVBO();
+		p3.g.initVBO();
 	}
 	@Override
 	public void refresh() {
-		geo.refresh();
-		p1.refresh();
-		p2.refresh();
-		p3.refresh();
+		geo.g.refresh();
+		p1.g.refresh();
+		p2.g.refresh();
+		p3.g.refresh();
 	}
 	@Override
 	public void render() {
 		glPushMatrix();
-		geo.highRender_noPushPop();
+		geo.highRender();
 		
 		glTranslatef(0,0,open);
-		this.p1.render();
+		this.p1.g.render();
 		glTranslatef(0,0,-open);
 		glRotatef(120,0,1,0);
 		glTranslatef(0,0,open);
-		this.p2.render();
+		this.p2.g.render();
 		glTranslatef(0,0,-open);
 		glRotatef(120,0,1,0);
 		glTranslatef(0,0,open);
-		this.p3.render();
+		this.p3.g.render();
 		glPopMatrix();
 	}
 //	@Override
@@ -88,14 +89,14 @@ public class Dropper extends Thing {
 	}
 	@Override
 	public void initPhysics() {
-		this.geo.mass=0;
-		RigidBodyConstructionInfo body=this.geo.initPhysics_mesh(origin,quat);
+		this.geo.p.mass=0;
+		RigidBodyConstructionInfo body=this.geo.p.initPhysics_mesh(this.geo.g,origin,quat);
 		body.restitution=1.0f;
-		this.geo.doBody(body);
+		this.geo.p.doBody(body);
 		
-		this.stop.mass=0;
-		RigidBodyConstructionInfo stopBody=this.stop.initPhysics_mesh(origin,quat);
-		this.stop.doBody(stopBody);
+		this.stop.p.mass=0;
+		RigidBodyConstructionInfo stopBody=this.stop.p.initPhysics_mesh(this.geo.g,origin,quat);
+		this.stop.p.doBody(stopBody);
 	}
 	@Override
 	public void processActivation() {
@@ -105,10 +106,10 @@ public class Dropper extends Thing {
 	@Override
 	public void logic() {
 		if(activations>=activationThreshold && pactivations<activationThreshold) {
-			stop.removePhysics();
+			stop.p.removePhysics();
 		}
 		if(activations<activationThreshold && pactivations>=activationThreshold) {
-			stop.addToSimulation(Thing.TESTGEO,Thing.EVERYTHING);
+			stop.p.addToSimulation(Thing.TESTGEO,Thing.EVERYTHING);
 			addCube();
 		}
 		float targOpen=0;
@@ -121,31 +122,31 @@ public class Dropper extends Thing {
 	}
 	@Override
 	public void initGeo() {
-		this.geo=new GObject();
-		this.geo.loadOBJ("dropper/cylinder");
-		this.geo.useTex=false;
-		this.geo.setColor(0.7f, 0.7f, 0.75f);
-		geo.lock();
+		this.geo=new WorldObject(true);
+		this.geo.g.loadOBJ("dropper/cylinder");
+		this.geo.g.useTex=false;
+		this.geo.g.setColor(0.7f, 0.7f, 0.75f);
+		geo.g.lock();
 		
-		this.p1=new GObject();
-		this.p1.loadOBJ("dropper/piece");
-		this.p1.setColor(0.3f,0.3f,0.35f);
-		p1.lock();
+		this.p1=new WorldObject(true,false);
+		this.p1.g.loadOBJ("dropper/piece");
+		this.p1.g.setColor(0.3f,0.3f,0.35f);
+		p1.g.lock();
 		
-		this.p2=new GObject();
-		this.p2.loadOBJ("dropper/piece");
-		this.p2.setColor(0.3f,0.3f,0.35f);
-		p2.lock();
+		this.p2=new WorldObject(true,false);
+		this.p2.g.loadOBJ("dropper/piece");
+		this.p2.g.setColor(0.3f,0.3f,0.35f);
+		p2.g.lock();
 		
-		this.p3=new GObject();
-		this.p3.loadOBJ("dropper/piece");
-		this.p3.setColor(0.3f,0.3f,0.35f);
-		p3.lock();
+		this.p3=new WorldObject(true,false);
+		this.p3.g.loadOBJ("dropper/piece");
+		this.p3.g.setColor(0.3f,0.3f,0.35f);
+		p3.g.lock();
 		
-		this.stop=new GObject();
-		this.stop.loadOBJ("dropper/stop");
-		this.stop.setColor(1, 0, 1);
-		stop.lock();
+		this.stop=new WorldObject(true);
+		this.stop.g.loadOBJ("dropper/stop");
+		this.stop.g.setColor(1, 0, 1);
+		stop.g.lock();
 		
 		declareResource(p1);
 		declareResource(p2);
@@ -158,10 +159,10 @@ public class Dropper extends Thing {
 	}
 	@Override
 	public void addPhysics(short group, short mask) {
-		this.geo.addToSimulation(group,mask);
-		this.stop.addToSimulation(group,mask);
-		this.geo.body.setUserPointer((Thing)this);
-		this.stop.body.setUserPointer((Thing)this);
+		this.geo.p.addToSimulation(group,mask);
+		this.stop.p.addToSimulation(group,mask);
+		this.geo.p.body.setUserPointer((Thing)this);
+		this.stop.p.body.setUserPointer((Thing)this);
 		addCube();
 	}
 }

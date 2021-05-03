@@ -19,10 +19,12 @@ import com.bulletphysics.linearmath.Transform;
 
 import anim.AnimParser;
 import anim.AnimTrack;
-import graphics.GObject;
 import graphics.GraphicsInit;
 import graphics.Renderer;
 import logger.Logger;
+import objectTypes.GObject;
+import objectTypes.PhysicsObject;
+import objectTypes.WorldObject;
 import physics.Physics;
 import util.Util;
 
@@ -39,8 +41,8 @@ public class Cube extends Thing {
 	private boolean e_rise=true;
 	private boolean p_picked=false;
 	public int cubeType=0;
-	transient GObject ggeo;
-	transient GObject alphaGeo;
+	transient WorldObject ggeo;
+	transient WorldObject alphaGeo;
 	/*
 	 * 0 - normal cube
 	 * 1 - companion cube
@@ -58,10 +60,10 @@ public class Cube extends Thing {
 		if(this.pickedUp) {
 			if(!p_picked) {
 				//First frame we are picked up
-				Physics.reAdd(this.geo.body,Thing.EVERYTHING,Thing.NPLAYER);
+				Physics.reAdd(this.geo.p.body,Thing.EVERYTHING,Thing.NPLAYER);
 				this.portalingCollisionsEnabled=true;
 			}
-			this.geo.body.setActivationState(CollisionObject.ACTIVE_TAG);
+			this.geo.p.body.setActivationState(CollisionObject.ACTIVE_TAG);
 			Vector3f pt=new Vector3f(0,0,-1);
 			Matrix3f rs=new Matrix3f();
 			Matrix4f ttr=new Matrix4f();
@@ -84,7 +86,7 @@ public class Cube extends Thing {
 			gravrot.transform(perpgrav);
 			perpgrav.normalize();
 			//force is the location of the target in world space.
-			tr=this.geo.getTransform();
+			tr=this.geo.p.getTransform();
 			Vector3f pos=tr.origin;
 			tr.getMatrix(ttr);
 			Vector3f c=new Vector3f();
@@ -92,8 +94,8 @@ public class Cube extends Thing {
 			float dotComp=pt.dot(perpgrav);
 			float crossComp=gravnorm.dot(c);
 			ttr.set(Util.AxisAngle_np(new AxisAngle4f(Physics.getGravity(),(float)Math.atan2(dotComp,crossComp))),tr.origin,1.0f);
-			this.geo.body.setWorldTransform(new Transform(ttr));
-			this.geo.body.setAngularVelocity(new Vector3f(0,0,0));
+			this.geo.p.body.setWorldTransform(new Transform(ttr));
+			this.geo.p.body.setAngularVelocity(new Vector3f(0,0,0));
 			
 			Vector3f targcdt2=(Vector3f)force.clone();
 			Vector3f targcdt3=(Vector3f)force.clone();
@@ -112,14 +114,14 @@ public class Cube extends Thing {
 				this.pickedUp=false;
 			}
 			force.scale(10.0f);
-			force.sub(this.geo.body.getLinearVelocity(new Vector3f()));
+			force.sub(this.geo.p.body.getLinearVelocity(new Vector3f()));
 			force.scale(700);
-			this.geo.body.applyCentralForce(force);
+			this.geo.p.body.applyCentralForce(force);
 			p_picked=true;
 		} else {
 			if(p_picked) {
 				//First frame we are put down
-				Physics.reAdd(this.geo.body,Thing.EVERYTHING,Thing.EVERYTHING);
+				Physics.reAdd(this.geo.p.body,Thing.EVERYTHING,Thing.EVERYTHING);
 				this.portalingCollisionsEnabled=true;
 			}
 			p_picked=false;
@@ -136,23 +138,23 @@ public class Cube extends Thing {
 	}
 	@Override
 	public void initPhysics() {
-		this.geo.mass=2.7f*0.642f*6.0f*(float)Math.pow(side_len*100.0f,2)*0.001f;
+		this.geo.p.mass=2.7f*0.642f*6.0f*(float)Math.pow(side_len*100.0f,2)*0.001f;
 		CollisionShape s=new BoxShape(getShape());
-		RigidBodyConstructionInfo body=this.geo.initPhysics_shape(s, origin, quat);
+		RigidBodyConstructionInfo body=this.geo.p.initPhysics_shape(s, origin, quat);
 		body.restitution=0f;
 		body.friction=0.74f;
 		body.angularDamping=0.0f;
 		body.linearDamping=0.16f;
-		this.geo.doBody(body);
-		this.geo.body.setActivationState(CollisionObject.DISABLE_DEACTIVATION);
+		this.geo.p.doBody(body);
+		this.geo.p.body.setActivationState(CollisionObject.DISABLE_DEACTIVATION);
 		//tr=new Transform();
 		//this.gravity=false;
 	}
 	//private transient Transform tr;
 	@Override
 	public void render() {
-		if(!this.ggeo.hasAlpha) {
-			this.ggeo.highRender();
+		if(!this.ggeo.g.hasAlpha) {
+			this.ggeo.g.highRender(geo.p);
 		} else {
 			throw new IllegalStateException("Cube.ggeo needs no alpha.");
 		}
@@ -161,7 +163,7 @@ public class Cube extends Thing {
 	public void alphaRender() {
 		if(alphaGeo==null) {return;}
 		glDepthMask(false);
-		this.alphaGeo.highRender();
+		this.alphaGeo.g.highRender(geo.p);
 		glDepthMask(true);
 	}
 	int counter=0;
@@ -191,41 +193,41 @@ public class Cube extends Thing {
 	}
 	@Override
 	public void initGeo() {
-		this.ggeo=new GObject();
-		this.geo=new GObject();
-		this.geo.loadOBJ("cube/cubecollgeo");
-		this.geo.scale(0.27f*(getShape().x/0.31f));
-		this.geo.setColor(1,0,1);
+		this.ggeo=new WorldObject();
+		this.ggeo.g=new GObject();
+		this.geo=new WorldObject();
+		this.geo.g=new GObject();
+		this.geo.p=new PhysicsObject();
+		this.geo.g.loadOBJ("cube/cubecollgeo");
+		this.geo.g.scale(0.27f*(getShape().x/0.31f));
+		this.geo.g.setColor(1,0,1);
 		
-		this.geo.lock();
+		this.geo.g.lock();
 		if(cubeType==Cube.NORMAL) {
-			this.ggeo.loadOBJ("cube/cube");
-			this.ggeo.setMaterial(0.10f,32,0,0);
+			this.ggeo.g.loadOBJ("cube/cube");
+			this.ggeo.g.setMaterial(0.10f,32,0,0);
 		} else if(cubeType==Cube.COMPANION) {
-			this.ggeo.loadOBJ("cube/cube","3d/cube/cube_comp.png");
-			this.ggeo.setMaterial(0.10f,32,0,0);
+			this.ggeo.g.loadOBJ("cube/cube","3d/cube/cube_comp.png");
+			this.ggeo.g.setMaterial(0.10f,32,0,0);
 		} else if(cubeType==Cube.LASER) {
-			this.alphaGeo=new GObject();
-			this.alphaGeo.loadOBJ("cube/laserlenses","3d/cube/lasercube.png");
-			this.alphaGeo.lock();
-			this.alphaGeo.useTex=true;
-			this.alphaGeo.setColor(1,1,1);
-			this.alphaGeo.scale(0.27f*(getShape().x/0.31f));
-			alphaGeo.initVBO();
-			alphaGeo.refresh();
-			this.ggeo.loadOBJ("cube/lasercube");
+			this.alphaGeo=new WorldObject();
+			this.alphaGeo.g=new GObject();
+			this.alphaGeo.g.loadOBJ("cube/laserlenses","3d/cube/lasercube.png");
+			this.alphaGeo.g.lock();
+			this.alphaGeo.g.useTex=true;
+			this.alphaGeo.g.setColor(1,1,1);
+			this.alphaGeo.g.scale(0.27f*(getShape().x/0.31f));
+			alphaGeo.g.initVBO();
+			alphaGeo.g.refresh();
+			this.ggeo.g.loadOBJ("cube/lasercube");
 		}
-		this.ggeo.useTex=true;
-		this.ggeo.scale(0.27f*(getShape().x/0.31f));
-		this.ggeo.setColor(1,1,1);
-		ggeo.lock();
-		ggeo.initVBO();
-		ggeo.refresh();
+		this.ggeo.g.useTex=true;
+		this.ggeo.g.scale(0.27f*(getShape().x/0.31f));
+		this.ggeo.g.setColor(1,1,1);
+		ggeo.g.lock();
+		ggeo.g.initVBO();
+		ggeo.g.refresh();
 //		ggeo.animator.add("Main", AnimParser.parse("3d/testcoords").setEndMode(AnimTrack.LOOP));
-		ggeo.transformObject=this.geo;
-		ggeo.setMotionSource(GObject.OTHER);
-//		ggeo.setMotionSource(GObject.ANIMATION);
-//		ggeo.animator.setActiveAnim("Main");
 		declareResource(ggeo);
 		declareResource(alphaGeo);
 	}

@@ -38,21 +38,21 @@ public abstract class PortalCaster {
 				Thing thing=Renderer.things.get(i);
 				if(DOES_NOT_STOP.contains(thing.type)) {continue;}
 				if(thing.geo==null) {continue;}
-				if(thing.geo.body==null) {continue;}
-				float fl=thing.geo.rayTest_distance(start,control,thing.geo.getTransform());
+				if(thing.geo.p.body==null) {continue;}
+				float fl=thing.geo.g.rayTest_distance(start,control,thing.geo.p.getTransform());
 				if(fl>0.0f && (fl<f || f<0.0f)) {
 					f=fl;
 					singleCastResult.hit=thing;
 				}
 			}
 		}
-		float fl=pp.geo.rayTest_distance(start,control,pp.p1);
+		float fl=pp.geo.g.rayTest_distance(start,control,pp.p1);
 		if(fl>0.0f && (fl<f || f<0.0f)) {
 			f=fl;
 			singleCastResult.hit=pp;
 			singleCastResult.portalhit=1;
 		}
-		fl=pp.geo2.rayTest_distance(start,control,pp.p2);
+		fl=pp.geo2.g.rayTest_distance(start,control,pp.p2);
 		if(fl>0.0f && (fl<f || f<0.0f)) {
 			f=fl;
 			singleCastResult.hit=pp;

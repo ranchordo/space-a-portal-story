@@ -22,15 +22,21 @@ import com.bulletphysics.linearmath.Transform;
 
 import audio.Soundtrack;
 import audio.SourcePool;
-import graphics.GObject;
 import graphics.GraphicsInit;
 import graphics.Renderer;
 import graphics.Shader;
 import logger.Logger;
+import objectTypes.GObject;
+import objectTypes.PhysicsObject;
+import objectTypes.WorldObject;
 import physics.InputHandler;
 import physics.Physics;
 import portalcasting.Segment;
 import util.SaveStateComponent;
+
+import static objectTypes.WorldObject.gnull;
+import static objectTypes.WorldObject.anull;
+import static objectTypes.WorldObject.pnull;
 
 public abstract class Thing implements Serializable {
 	protected static final long serialVersionUID = 8139848476402960972L;
@@ -58,13 +64,6 @@ public abstract class Thing implements Serializable {
 		Vector3f pt=new Vector3f(0,0,-2);
 		Matrix3f rs=new Matrix3f();
 		Renderer.camera.getTransform().getMatrix(new Matrix4f()).getRotationScale(rs);
-//		try {
-//			rs.invert();
-//		} catch (SingularMatrixException e) {
-//			System.err.println("Thing.runRayTest: SingularMatrixException!");
-//			System.out.println(rs);
-//			return;
-//		}
 		rs.transform(pt);
 		Physics.dynamicsWorld.rayTest(Renderer.camera.pos_out,new Vector3f(
 				Renderer.camera.pos_out.x+pt.x,
@@ -72,7 +71,7 @@ public abstract class Thing implements Serializable {
 				Renderer.camera.pos_out.z+pt.z)  ,f);
 	}
 	private HashMap<String,Integer> IdFieldAssoc;
-	private transient ArrayList<GObject> resources;
+	private transient ArrayList<WorldObject> resources;
 	protected SaveStateComponent saveStateComponent;
 	protected transient Soundtrack soundtrack;
 	public transient SourcePool sourcePool;
@@ -83,16 +82,18 @@ public abstract class Thing implements Serializable {
 	protected boolean funnelCheckYes=false;
 	protected boolean gravity=true;
 	public boolean portalable=false;
-	public boolean stopsPortals=false;
+	public boolean portalsIgnore=false;
 	public boolean portalingCollisionsEnabled=true;
 	public boolean npflag=false;
 	public boolean npflag2=false;
 	public short oshmask=0;
 	public short oshgroup=0;
+	public transient Matrix4f lastPortalCheckin1;
+	public transient Matrix4f lastPortalCheckin2;
 	protected Vector3f constForce=new Vector3f(0,0,0);
 	public boolean isTest=true;
 	public boolean doPhysicsOnSerialization=true;
-	public transient GObject geo;
+	public transient WorldObject geo;
 	public String type;
 	protected Vector3f shape;
 	public Vector3f prevPos=new Vector3f();
@@ -108,8 +109,8 @@ public abstract class Thing implements Serializable {
 	public void logic() {portalCounter++;} //What do we do if we're activated?
 	public void applyBackForce() {
 		if(this.geo==null) {return;}
-		if(this.geo.body==null) {return;}
-		if(this.geo.dynamic) {this.geo.body.applyCentralForce(constForce);}
+		if(this.geo.p.body==null) {return;}
+		if(this.geo.p.dynamic) {this.geo.p.body.applyCentralForce(constForce);}
 	}
 	public void processActivation() {} //Process the following: Should we send out activations?
 	public boolean sendingActivations=false;
@@ -130,24 +131,24 @@ public abstract class Thing implements Serializable {
 	public boolean useModifiedCollision=false;
 	public boolean runCollisionRayTest(Vector3f pos) {return false;}
 	public void setAttachedNPCollisionFlag(boolean in) {}
-	public ArrayList<GObject> getResources() {
+	public ArrayList<WorldObject> getResources() {
 		return resources;
 	}
-	public void declareResource(GObject g) {
-		if(g==null) {return;}
-		resources.add(g);
+	public void declareResource(WorldObject geo2) {
+		if(geo2==null) {return;}
+		resources.add(geo2);
 	}
 	public void doSaveState() { //Due to a mandatory test protocol, we will stop taking transforms in constructors in 3, 2, 1.
-		if(this.geo==null || this.geo.getTransformSource()!=GObject.PHYSICS) {return;}
+		if(pnull(this.geo) || this.geo.p.getTransformSource()!=PhysicsObject.PHYSICS) {return;}
 		saveStateComponent=new SaveStateComponent();
 		saveStateComponent.transform=new Matrix4f();
 		saveStateComponent.velocity=new Vector3f();
-		this.geo.getTransform().getMatrix(saveStateComponent.transform);
-		this.geo.body.getLinearVelocity(saveStateComponent.velocity);
+		this.geo.p.getTransform().getMatrix(saveStateComponent.transform);
+		this.geo.p.body.getLinearVelocity(saveStateComponent.velocity);
 	}
 	public final void requiredLogic() {
 		if(this.geo==null) {return;}
-		tranVectorPointer.set(this.geo.getTransform().origin);
+		tranVectorPointer.set(this.geo.p.getTransform().origin);
 		//System.out.println("B "+tranVectorPointer);
 		GraphicsInit.player.getInverseTransform().transform(tranVectorPointer);
 		//System.out.println("A "+tranVectorPointer);
@@ -190,13 +191,13 @@ public abstract class Thing implements Serializable {
 		return this;
 	}
 	public void refresh() {
-		geo.refresh();
+		geo.g.refresh();
 	}
 	public void render() {
-		if(!this.geo.hasAlpha) {this.geo.highRender();}
+		if(!this.geo.g.hasAlpha) {this.geo.highRender();}
 	}
 	public void alphaRender() {
-		if(this.geo.hasAlpha) {this.geo.highRender();}
+		if(this.geo.g.hasAlpha) {this.geo.highRender();}
 	}
 	protected void onSerializationAdditional() {} //Trump just got sworn out of office. I have no idea why I'm typing that here, but I am so happy.
 	public final void onSerialization() {
@@ -209,9 +210,9 @@ public abstract class Thing implements Serializable {
 	}
 	public void unpackSaveState() {
 		if(this.saveStateComponent!=null) {
-			if(this.geo.getTransformSource()==GObject.PHYSICS) {
-				this.geo.body.setWorldTransform(new Transform(saveStateComponent.transform));
-				this.geo.body.setLinearVelocity(saveStateComponent.velocity);
+			if(this.geo.p.getTransformSource()==PhysicsObject.PHYSICS) {
+				this.geo.p.body.setWorldTransform(new Transform(saveStateComponent.transform));
+				this.geo.p.body.setLinearVelocity(saveStateComponent.velocity);
 				Logger.log(0,type+": Restoring rbstate from local saveStateComponent");
 			}
 		}
@@ -227,16 +228,16 @@ public abstract class Thing implements Serializable {
 		}
 	}
 	public void addPhysics(short group, short mask) {
-		this.geo.addToSimulation(group,mask);
-		this.geo.body.setUserPointer(this);
+		this.geo.p.addToSimulation(group,mask);
+		this.geo.p.body.setUserPointer(this);
 	}
 	public void initVBO() {
-		geo.initVBO();
+		geo.g.initVBO();
 	}
 	public void interact() {
 		this.interacted=false;
 		for(LocalRayResult l : rayTest) {
-			if(((RigidBody)l.collisionObject).equals(this.geo.body)) {
+			if(((RigidBody)l.collisionObject).equals(this.geo.p.body)) {
 				this.interacted=true;
 			}
 		}
@@ -245,9 +246,9 @@ public abstract class Thing implements Serializable {
 	protected final void initIdField() {IdFieldAssoc=new HashMap<String,Integer>();}
 	public final void init() {
 		if(this.geo!=null) {
-			prevPos=geo.getTransform().origin;
+			prevPos=geo.p.getTransform().origin;
 		}
-		resources=new ArrayList<GObject>();
+		resources=new ArrayList<WorldObject>();
 		collisions=new ArrayList<Thing>();
 		pcollisions=new ArrayList<Thing>();
 		collisionVels=new ArrayList<Float>();
@@ -269,10 +270,10 @@ public abstract class Thing implements Serializable {
 	public final void clean() {
 		sourcePool.free();
 		sourcePool.die();
-		for(GObject g : resources) {
-			g.clean();
-			if(g.body!=null) {
-				Physics.remove(g.body);
+		for(WorldObject g : resources) {
+			g.g.clean();
+			if(g.p.body!=null) {
+				Physics.remove(g.p.body);
 			}
 		}
 	}
@@ -281,7 +282,7 @@ public abstract class Thing implements Serializable {
 	}
 	public void refreshGravity() {
 		if(this.geo==null) {return;}
-		if(this.geo.body==null) {return;}
+		if(this.geo.p.body==null) {return;}
 		if(!this.gravity) {
 			Vector3f g=Physics.getGravity();
 			constForce=new Vector3f(-g.x,-g.y,-g.z);

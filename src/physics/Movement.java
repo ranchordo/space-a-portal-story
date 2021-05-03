@@ -40,7 +40,7 @@ public class Movement {
 	public static Vector3f force(Vector3f targ, Vector3f curr, float scale, Vector3f ret) {
 		ret.set(targ);
 		ret.sub(curr);
-		ret.scale(GraphicsInit.player.geo.mass*scale);
+		ret.scale(GraphicsInit.player.geo.p.mass*scale);
 		return ret;
 	}
 	public static float sensitivity=0.2f;
@@ -68,7 +68,7 @@ public class Movement {
 		float df=4.0f;
 		float frc_scale=7.0f;
 		boolean inputPressed=false;
-		player=GraphicsInit.player.geo.getTransform();
+		player=GraphicsInit.player.geo.p.getTransform();
 		player.getMatrix(new Matrix4f()).getRotationScale(player_transform);
 		if(player_d.onFloor && !player_d.isInGodMode()) {
 			targ.set(0,0,0);
@@ -98,43 +98,43 @@ public class Movement {
 			}
 			if(in.i(GLFW_KEY_SPACE)) {
 				Vector3f cd=player_d.getCurrDown();
-				float mul=5.0f*GraphicsInit.player.geo.mass;
+				float mul=5.0f*GraphicsInit.player.geo.p.mass;
 				dot2.set(-cd.x,-cd.y,-cd.z);
 				appImpulse.set(-cd.x*mul,-cd.y*mul,-cd.z*mul);
-				if((GraphicsInit.player.geo.body.getLinearVelocity(linvel).dot(dot2))<=0.1f) {
-					GraphicsInit.player.geo.body.applyCentralImpulse(
+				if((GraphicsInit.player.geo.p.body.getLinearVelocity(linvel).dot(dot2))<=0.1f) {
+					GraphicsInit.player.geo.p.body.applyCentralImpulse(
 							appImpulse);
 				}
 			}
 			targ.scale(df);
-			GraphicsInit.player.geo.body.applyCentralForce(
+			GraphicsInit.player.geo.p.body.applyCentralForce(
 					Movement.force(targ, //Target
-							GraphicsInit.player.geo.body.getLinearVelocity(new Vector3f()),frc_scale,frcout)); //Current
+							GraphicsInit.player.geo.p.body.getLinearVelocity(new Vector3f()),frc_scale,frcout)); //Current
 		} else if(!player_d.onFloor && !player_d.isInGodMode()) {
 			df=120.0f;
 			if(in.i(GLFW_KEY_W)) {
 				inputPressed=true;
 				target.set(0,0,-df);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(target);
+				GraphicsInit.player.geo.p.body.applyCentralForce(target);
 			}
 			if(in.i(GLFW_KEY_S)) {
 				inputPressed=true;
 				target.set(0,0,df);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(target);
+				GraphicsInit.player.geo.p.body.applyCentralForce(target);
 			}
 			if(in.i(GLFW_KEY_A)) {
 				inputPressed=true;
 				target.set(-df,0,0);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(target);
+				GraphicsInit.player.geo.p.body.applyCentralForce(target);
 			}
 			if(in.i(GLFW_KEY_D)) {
 				inputPressed=true;
 				target.set(df,0,0);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(target);
+				GraphicsInit.player.geo.p.body.applyCentralForce(target);
 			}
 			
 			
@@ -149,54 +149,54 @@ public class Movement {
 				inputPressed=true;
 				target.set(0,0,-df);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(
+				GraphicsInit.player.geo.p.body.applyCentralForce(
 						Movement.force(target, //Target
-								GraphicsInit.player.geo.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
+								GraphicsInit.player.geo.p.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
 			}
 			if(in.i(GLFW_KEY_S)) {
 				inputPressed=true;
 				target.set(0,0,df);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(
+				GraphicsInit.player.geo.p.body.applyCentralForce(
 						Movement.force(target, //Target
-								GraphicsInit.player.geo.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
+								GraphicsInit.player.geo.p.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
 			}
 			if(in.i(GLFW_KEY_A)) {
 				inputPressed=true;
 				target.set(-df,0,0);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(
+				GraphicsInit.player.geo.p.body.applyCentralForce(
 						Movement.force(target, //Target
-								GraphicsInit.player.geo.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
+								GraphicsInit.player.geo.p.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
 			}
 			if(in.i(GLFW_KEY_D)) {
 				inputPressed=true;
 				target.set(df,0,0);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(
+				GraphicsInit.player.geo.p.body.applyCentralForce(
 						Movement.force(target, //Target
-								GraphicsInit.player.geo.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
+								GraphicsInit.player.geo.p.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
 			}
 			if(in.i(GLFW_KEY_SPACE)) {
 				inputPressed=true;
 				target.set(0,df,0);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(
+				GraphicsInit.player.geo.p.body.applyCentralForce(
 						Movement.force(target, //Target
-								GraphicsInit.player.geo.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
+								GraphicsInit.player.geo.p.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
 			}
 			if(in.i(GLFW_KEY_LEFT_SHIFT)) {
 				inputPressed=true;
 				target.set(0,-df,0);
 				player_transform.transform(target);
-				GraphicsInit.player.geo.body.applyCentralForce(
+				GraphicsInit.player.geo.p.body.applyCentralForce(
 						Movement.force(target, //Target
-								GraphicsInit.player.geo.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
+								GraphicsInit.player.geo.p.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
 			}
 			if(!inputPressed) {
-				GraphicsInit.player.geo.body.applyCentralForce(
+				GraphicsInit.player.geo.p.body.applyCentralForce(
 						Movement.force(new Vector3f(0.0f,0.0f,0.0f), //Target
-								GraphicsInit.player.geo.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
+								GraphicsInit.player.geo.p.body.getLinearVelocity(linvel),frc_scale,frcout)); //Current
 			}
 		}
 		if(mX==null) {mX=BufferUtils.createDoubleBuffer(1);}
@@ -219,7 +219,7 @@ public class Movement {
 
 		proty=nroty;
 		if(((Player)GraphicsInit.player).bindToObject) {
-			Transform tr=GraphicsInit.player.geo.getTransform();
+			Transform tr=GraphicsInit.player.geo.p.getTransform();
 			AxisAngle4f axisAngle=Util.noPool(Util.Quat(tr.getRotation(new Quat4f())));
 			Vector3f p=((Player)GraphicsInit.player).getCameraPositioning();
 			camera.position(p.x,p.y,p.z);

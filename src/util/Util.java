@@ -186,4 +186,15 @@ public class Util {
 		String externalPath=jarpath.getParentFile().getAbsolutePath().replace("\\", "/").replace("%20", " ");
 		return externalPath;
 	}
+	public static int gcd2(int a, int b) {
+		if(a==0) {return b;}
+		return gcd2(b%a,a);
+	}
+	public static int gcd(Iterable<Integer> v) {
+		int result=0;
+		for(int a : v) {
+			result=gcd2(result,a);
+		}
+		return result;
+	}
 }

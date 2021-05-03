@@ -1,28 +1,21 @@
 package graphics;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL11.GL_MODELVIEW_MATRIX;
-import static org.lwjgl.opengl.GL11.GL_PROJECTION_MATRIX;
-import static org.lwjgl.opengl.GL11.glGetFloatv;
 import static org.lwjgl.opengl.GL46.*;
 
 import java.nio.FloatBuffer;
 
-import javax.vecmath.Vector2f;
-import javax.vecmath.Vector3f;
 import javax.vecmath.Matrix4f;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.GL;
 
-import com.bulletphysics.linearmath.Transform;
 
 import audio.Audio;
 import audio.Source;
 import logger.Logger;
 import util.ImageUtil;
-import util.Util;
 
 public class RenderUtils {
 	public static int windowedW=864;
@@ -54,9 +47,9 @@ public class RenderUtils {
 
 	public static Matrix4f proj_matrix;
 	private static void glPerspective(float fov, float aspect, float n, float f) {
-		float fH = (float) Math.tan(fov / 360 * Math.PI) * n;
-		float fW = fH * aspect;
-		glFrustum( -fW, fW, -fH, fH, n, f );
+		//float fH = (float) Math.tan(fov / 360 * Math.PI) * n;
+		//float fW = fH * aspect;
+		//glFrustum( -fW, fW, -fH, fH, n, f );
 		//           l,  r,   b,  t, n, f
 		Matrix4f res=new Matrix4f();
 		float tanHalfFovy = (float) Math.tan(Math.toRadians(fov) * 0.5);
@@ -179,9 +172,6 @@ public class RenderUtils {
 		//glClearColor(1.0f,0.0f,0.0f,0.0f);
 
 		glShadeModel(GL_SMOOTH);
-
-		glEnable(GL_LIGHTING);
-		glEnable(GL_LIGHT1);
 		//glEnable(GL_LIGHT2);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

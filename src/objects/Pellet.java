@@ -16,7 +16,6 @@ import com.bulletphysics.dynamics.RigidBody;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.GraphicsInit;
 import graphics.RenderUtils;
 import graphics.Renderer;
@@ -25,6 +24,7 @@ import graphics.VertexMap;
 import lighting.Light;
 import lighting.Lighting;
 import logger.Logger;
+import objectTypes.GObject;
 import physics.Physics;
 import util.RigidBodyEntry;
 

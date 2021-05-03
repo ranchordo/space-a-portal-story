@@ -5,7 +5,7 @@ import javax.vecmath.Vector3f;
 
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 
-import graphics.GObject;
+import objectTypes.GObject;
 
 public class GenericThing extends Thing {
 	private static final long serialVersionUID = 6058389346063051060L;

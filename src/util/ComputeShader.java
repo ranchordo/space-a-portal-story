@@ -4,22 +4,16 @@ import static org.lwjgl.opengl.GL43.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
-import java.util.HashMap;
-import java.util.Map.Entry;
-
-import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
 
+import logger.Logger;
 import org.lwjgl.system.MemoryStack;
 
 import graphics.Renderer;
-import logger.Logger;
 
 public class ComputeShader extends ShaderDataCompatible {
-	public static final boolean IGNORE_MISSING=false;
+	public static final boolean IGNORE_MISSING=true;
 	private int program;
 	private int cs;
 	private String fname;
@@ -32,22 +26,21 @@ public class ComputeShader extends ShaderDataCompatible {
 		glShaderSource(cs, readFile(fname+".cpsh"));
 		glCompileShader(cs);
 		if(glGetShaderi(cs, GL_COMPILE_STATUS) != 1) {
-			System.err.println(glGetShaderInfoLog(cs));
-			System.exit(1);
+			Logger.log(3,"In shader "+fname+".cpsh:");
+			Logger.log(4,glGetShaderInfoLog(cs));
 		}
 		
 		glAttachShader(program,cs);
 		
 		glLinkProgram(program);
 		if(glGetProgrami(program,GL_LINK_STATUS)!=1) {
-			System.err.println(glGetProgramInfoLog(program));
-			System.exit(1);
+			Logger.log(4,glGetProgramInfoLog(program));
 		}
 		glValidateProgram(program);
 		if(glGetProgrami(program,GL_VALIDATE_STATUS)!=1) {
-			System.err.println(glGetProgramInfoLog(program));
-			System.exit(1);
+			Logger.log(4,glGetProgramInfoLog(program));
 		}
+		Logger.log(0,"Loaded compute shader \""+fname+"\" successfully.");
 	}
 	private static Vector4f ret=new Vector4f();
 	private static boolean gotLimits=false;
@@ -55,10 +48,10 @@ public class ComputeShader extends ShaderDataCompatible {
 		if(!gotLimits) {
 			gotLimits=true;
 			try(MemoryStack stack=MemoryStack.stackPush()){
-				IntBuffer x=Renderer.stack.mallocInt(1);
-				IntBuffer y=Renderer.stack.mallocInt(1);
-				IntBuffer z=Renderer.stack.mallocInt(1);
-				IntBuffer w=Renderer.stack.mallocInt(1);
+				IntBuffer x=stack.mallocInt(1);
+				IntBuffer y=stack.mallocInt(1);
+				IntBuffer z=stack.mallocInt(1);
+				IntBuffer w=stack.mallocInt(1);
 				glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,0,x);
 				glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,1,y);
 				glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,2,z);
@@ -85,7 +78,7 @@ public class ComputeShader extends ShaderDataCompatible {
 		StringBuilder string=new StringBuilder();
 		BufferedReader b;
 		try {
-			b=new BufferedReader(new InputStreamReader(game.Main.class.getResourceAsStream("/compute_shaders/"+fname)));
+			b=new BufferedReader(new InputStreamReader(ComputeShader.class.getResourceAsStream("/compute_shaders/"+fname)));
 			String line;
 			while((line=b.readLine())!=null) {
 				string.append(line);

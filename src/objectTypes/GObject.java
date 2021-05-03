@@ -1,8 +1,6 @@
-package graphics;
+package objectTypes;
 
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL15.*;
-import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL43.*;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -34,6 +32,13 @@ import com.bulletphysics.linearmath.MotionState;
 import com.bulletphysics.linearmath.Transform;
 
 import anim.Animator;
+import graphics.GraphicsInit;
+import graphics.RenderUtils;
+import graphics.Renderer;
+import graphics.Shader;
+import graphics.Texture;
+import graphics.Tri;
+import graphics.VertexMap;
 import logger.Logger;
 import physics.Physics;
 import pooling.PoolElement;
@@ -50,27 +55,14 @@ public class GObject {
 	public static final int TANGENT_DATA=4;
 	public static final int MATERIAL_DATA=5;
 	
-	public static final int PHYSICS=0;
-	public static final int ANIMATION=1;
-	public static final int NONE=2;
-	public static final int OTHER=3;
-	public static final int VARIABLE=4;
-	
 	public boolean useTex=false;
 	public boolean useBump=false;
-	public RigidBody body;
-	public Animator animator=new Animator();
-	public GObject transformObject;
-	public Transform transformVariable;
-	public boolean fullMesh=false;
 	private ArrayList<Tri> tris=new ArrayList<Tri>();
 	public VertexMap vmap=new VertexMap();
 	public boolean fromOBJ=false;
-	private Vector3f inertia=new Vector3f(0,0,0);
+	
 	private Shader renderingShader=null;
-	public float mass=1;
-	public float framerate=60;
-	public boolean dynamic=false;
+	
 	public boolean useLighting=true;
 	public boolean wireframe=false;
 	
@@ -90,6 +82,8 @@ public class GObject {
 	private int tan_id;
 	private int bit_id;
 	
+	public int instances=-1;
+	
 //	protected Vector2f atlas_transform(Vector2f prop_texcoord) {
 //		Vector2f texcoord_pix_rel=new Vector2f(prop_texcoord.x*vmap.tex.img.getWidth(),(1-prop_texcoord.y)*vmap.tex.img.getHeight());
 //		Vector2f texcoord_pix=new Vector2f(texcoord_pix_rel.x+vmap.tex.atlasX,texcoord_pix_rel.y+vmap.tex.atlasY);
@@ -97,43 +91,14 @@ public class GObject {
 //		return texcoord;
 //	}
 	
-	private boolean rnp=false;
-	public void restrictNonPhysics() {rnp=true;}
-	private int transformSource=PHYSICS;
-	public void setMotionSource(int motionSource) {
-		if(!rnp) {
-			this.transformSource=motionSource;
-		}
-	}
-	public int getTransformSource() {return transformSource;}
-	private transient Transform ret;
-	public Transform getTransform() {
-		if(ret==null) {ret=new Transform();}
-		switch(transformSource) {
-		case PHYSICS:
-			if(body==null) {
-				return null;
-			}
-			body.getWorldTransform(ret);
-			return ret;
-		case ANIMATION:
-			return animator.getFrame();
-		case NONE:
-			return null;
-		case OTHER:
-			return transformObject.getTransform();
-		case VARIABLE:
-			ret.set(transformVariable);
-			return ret;
-		default:
-			return null;
-		}
-	}
 	public void addTri(Tri toAdd) {
 		if(!trisLocked) {tris.add(toAdd);}
 		else {
 			throw new SecurityException("addTri: Tris are locked, you idiot!");
 		}
+	}
+	public ArrayList<Tri> getTris() {
+		return tris;
 	}
 	public void clean() {
 		clearVBOs();
@@ -149,59 +114,7 @@ public class GObject {
 	public boolean getLocked() {return trisLocked;}
 	public void lock() {trisLocked=true;}
 	public void unlock() {trisLocked=false;}
-//	public static float[] multi_vertices(GObject... objects) {
-//		float[] ret={};
-//		for(GObject object : objects) {
-//			float[] obj_vertices=object.glvertices();
-//			float[] dest=new float[obj_vertices.length+ret.length];
-//			System.arraycopy(ret,0,dest,0,ret.length);
-//			System.arraycopy(obj_vertices,0,dest,ret.length,obj_vertices.length);
-//			ret=dest;
-//		}
-//		return ret;
-//	}
-//	public static float[] multi_texcoordsp(boolean trans, GObject... objects) {
-//		float[] ret={};
-//		for(GObject object : objects) {
-//			float[] obj_vertices=object.gltexcoords();
-//			float[] dest=new float[obj_vertices.length+ret.length];
-//			System.arraycopy(ret,0,dest,0,ret.length);
-//			System.arraycopy(obj_vertices,0,dest,ret.length,obj_vertices.length);
-//			ret=dest;
-//		}
-//		return ret;
-//	}
-	public RigidBodyConstructionInfo initPhysics_mesh(Vector3f pos, Quat4f rot) {
-		CollisionShape shape=null;
-		if(fromOBJ) {
-			OBJReturnObject o=new OBJReturnObject();
-			o.fromVMap(vmap, tris);
-			TriangleIndexVertexArray mesh=new TriangleIndexVertexArray(o.numTriangles,o.indices,3*4,this.vmap.vertices.size(),o.vertices,3*4);
-			shape=new BvhTriangleMeshShape(mesh,true);
-			MotionState motionState=new DefaultMotionState(new Transform(new Matrix4f(
-					rot,
-					pos,1.0f)));
-			dynamic=mass!=0;
-			if(dynamic) {
-				shape.calculateLocalInertia(mass,inertia);
-			}
-			RigidBodyConstructionInfo bodyConstructionInfo=new RigidBodyConstructionInfo(mass,motionState,shape,inertia);
-			return bodyConstructionInfo;
-		}
-		return null;
-	}
-	public RigidBodyConstructionInfo initPhysics_shape(CollisionShape shape, Vector3f pos, Quat4f rot) {
-		MotionState motionState=new DefaultMotionState(new Transform(new Matrix4f(
-				rot,
-				pos,1.0f)));
-		dynamic=mass!=0;
-		if(dynamic) {
-			shape.calculateLocalInertia(mass,inertia);
-		}
-		RigidBodyConstructionInfo bodyConstructionInfo=new RigidBodyConstructionInfo(mass,motionState,shape,inertia);
-		bodyConstructionInfo.restitution=0.25f;
-		return bodyConstructionInfo;
-	}
+	
 	FloatBuffer vertex_data;
 	FloatBuffer texture_data;
 	FloatBuffer color_data;
@@ -270,18 +183,6 @@ public class GObject {
 		tan_id=glGenBuffers();
 		bit_id=glGenBuffers();
 	}
-	public void doBody(RigidBodyConstructionInfo bodyConstructionInfo) {
-		this.body=new RigidBody(bodyConstructionInfo);
-	}
-	public void addToSimulation(short group) {
-		Physics.add(body,group);
-	}
-	public void addToSimulation(short group, short mask) {
-		Physics.add(body,group,mask);
-	}
-	public void removePhysics() {
-		Physics.remove(body);
-	}
 	public boolean rayTest(Vector3f a, Vector3f b, Transform tr) {
 		for(Tri t : tris) {
 			if(t.rayTest(a,b,vmap,tr)) {
@@ -290,14 +191,6 @@ public class GObject {
 		}
 		return false;
 	}
-//	public boolean rayTest_old(Vector3f a, Vector3f b, Transform tr) {
-//		for(Tri t : tris) {
-//			if(t.rayTest_old(a,b,vmap,tr)) {
-//				return true;
-//			}
-//		}
-//		return false;
-//	}
 	public ArrayList<Tri> rayTest_list(Vector3f a, Vector3f b, Transform tr) {
 		ArrayList<Tri> result=new ArrayList<Tri>();
 		for(Tri t : tris) {
@@ -364,9 +257,6 @@ public class GObject {
 	Matrix3f m=new Matrix3f();
 	float[] mma=new float[16];
 	FloatBuffer fm=BufferUtils.createFloatBuffer(16);
-	Vector3f pos=new Vector3f();
-	Quat4f rot=new Quat4f();
-	AxisAngle4f r=new AxisAngle4f();
 	FloatBuffer f=BufferUtils.createFloatBuffer(9);
 	
 	Matrix4f m4_=new Matrix4f();
@@ -378,13 +268,15 @@ public class GObject {
 		} else {
 			renderingShader.bind();
 		}
-		mm.getMatrix(m4_).getRotationScale(m);
-		sc=Util.getAvgScale(m);
-		f=Util.asFloatBuffer(toFloatArray(m,m3_),f);
-		//mma=new float[16];
-		mm.getOpenGLMatrix(mma);
-		fm=Util.asFloatBuffer(mma,fm);
-		Renderer.activeShader.setUniformMatrix4fv("master_matrix", fm);
+		if(mm!=null) {
+			mm.getMatrix(m4_).getRotationScale(m);
+			sc=Util.getAvgScale(m);
+			f=Util.asFloatBuffer(toFloatArray(m,m3_),f);
+			//mma=new float[16];
+			mm.getOpenGLMatrix(mma);
+			fm=Util.asFloatBuffer(mma,fm);
+			Renderer.activeShader.setUniformMatrix4fv("master_matrix", fm);
+		}
 		
 		mmc.set(Renderer.camtr);
 		if(Renderer.activePortalTransform!=0) {
@@ -405,18 +297,11 @@ public class GObject {
 		
 		Renderer.activeShader.setUniform1i("millis",(int)(RenderUtils.micros()));
 		
-		pos=mm.origin;
-		PoolElement<Quat4f> rot_pe=Pools.quat4f.alloc();
-		mm.getRotation(rot_pe.o());
-		PoolElement<AxisAngle4f> r_pe=Util.Quat(rot_pe.o());
-		rot_pe.free();
-		r=r_pe.o();
-		//glTranslatef(pos.x,pos.y,pos.z);
-		//glRotatef((float)Math.toDegrees(r.angle),r.x,r.y,r.z);
-		r_pe.free();
 		Renderer.activeShader.setUniform1f("useTextures", (useTex && this.vmap.tex.colorLoaded && Renderer.useGraphics) ? 2 : 0);
 		Renderer.activeShader.setUniform1f("useLighting", (this.useLighting && Renderer.useGraphics) ? 2 : 0);
 		Renderer.activeShader.setUniform1f("useDetail", (this.vmap.tex.normLoaded && useBump && Renderer.useGraphics) ? (2) : 0);
+		
+		Renderer.activeShader.applyAllSSBOs();
 		if(useTex && this.vmap.tex.colorLoaded && Renderer.useGraphics) {this.vmap.tex.bind();}
 		//glScalef(scale.x,scale.y,scale.z);
 		//glScalef(sc,sc,sc);
@@ -426,14 +311,10 @@ public class GObject {
 //		System.out.println(st);
 //		return 0;
 //	}
-	public void highRender_noPushPop() {
-		highRender_noPushPop_customTransform(getTransform());
+	public void highRender(PhysicsObject obj) {
+		highRender_noPushPop_customTransform(obj.getTransform());
 	}
-	public void highRender() {
-		glPushMatrix();
-		highRender_noPushPop();
-		glPopMatrix();
-	}
+
 	public int getNumTris() {
 		return tris.size();
 	}
@@ -458,6 +339,13 @@ public class GObject {
 	public boolean texAV() {return vmap.texcoords.size()>0;}
 	public boolean bumpUAL() {
 		return useBump && vmap.tex.normLoaded;
+	}
+	private void drawArrays() {
+		if(instances<1) {
+			glDrawArrays(GL_TRIANGLES,0,tris.size()*3);
+		} else {
+			glDrawArraysInstanced(GL_TRIANGLES,0,tris.size()*3,instances);
+		}
 	}
 	public void render() {
 		if(!useCulling) {glDisable(GL_CULL_FACE);}
@@ -496,7 +384,7 @@ public class GObject {
 		glVertexAttribPointer(13,4,GL_FLOAT,false,0,0);
 		
 		
-		glDrawArrays(GL_TRIANGLES,0,tris.size()*3);
+		drawArrays();
 		glBindBuffer(GL_ARRAY_BUFFER,0);
 		
 		glDisableVertexAttribArray(0);
@@ -519,7 +407,6 @@ public class GObject {
 		}
 	}
 	public void setMaterial(float spec, float rough, float mat2, float mat3) {
-		Tri t0=tris.get(0);
 		for(int i=0;i<tris.size();i++) {
 			tris.get(i).setMaterial(spec,rough,mat2,mat3);
 		}

@@ -14,10 +14,10 @@ import com.bulletphysics.collision.shapes.CollisionShape;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.GraphicsInit;
 import graphics.Renderer;
 import logger.Logger;
+import objectTypes.GObject;
 import physics.Physics;
 import util.Util;
 

@@ -11,9 +11,9 @@ import javax.vecmath.Vector3f;
 
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.Renderer;
 import graphics.Tri;
+import objectTypes.GObject;
 
 public class Trigger extends Thing {
 	private static final long serialVersionUID = -21766941867476496L;

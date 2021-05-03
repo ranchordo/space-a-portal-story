@@ -17,9 +17,9 @@ import com.bulletphysics.linearmath.Transform;
 
 import anim.AnimParser;
 import anim.AnimTrack;
-import graphics.GObject;
 import graphics.Renderer;
 import graphics.Tri;
+import objectTypes.GObject;
 import pooling.PoolElement;
 import pooling.Pools;
 import portalcasting.PortalCaster;

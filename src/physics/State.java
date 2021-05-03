@@ -6,7 +6,9 @@ import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3f;
 
 import com.bulletphysics.linearmath.Transform;
+import com.sun.javafx.geom.transform.SingularMatrixException;
 
+import logger.Logger;
 import util.Util;
 
 import static org.lwjgl.opengl.GL46.*;
@@ -81,7 +83,12 @@ public class State {
 	public Transform getInvTransform() {
 		getTransform();
 		ret.getMatrix(tempmat);
-		tempmat.invert();
+		try {
+			tempmat.invert();
+		} catch (Exception e) {
+			System.out.println(tempmat);
+			Logger.log(4,e.toString());
+		}
 		ret.set(tempmat);
 		return ret;
 	}

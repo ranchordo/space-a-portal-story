@@ -15,11 +15,11 @@ import javax.vecmath.Vector3f;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.GraphicsInit;
 import graphics.Renderer;
 import graphics.Tri;
 import logger.Logger;
+import objectTypes.GObject;
 import pooling.PoolElement;
 import pooling.Pools;
 import portalcasting.PortalCaster;

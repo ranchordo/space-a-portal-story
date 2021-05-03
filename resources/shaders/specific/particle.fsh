@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 
 #define pi 3.1415926535897932384
 #define MAX_LIGHTS 50
@@ -16,12 +16,12 @@ varying vec3 campos;
 uniform sampler2D tex;
 uniform float altValue=0.15;
 varying vec4 intensity;
+varying float alive;
 
 uniform float useTextures=0;
 uniform float useLighting=2;
 float stop(float v) {
-	if(v>1) {return 1;}
-	return v;
+	return min(v,1);
 }
 void main() {
 	vec4 intensity_in=intensity;
@@ -46,5 +46,5 @@ void main() {
 	if(useTextures>=1) {
 		fcol=fcol*texture2D(tex,texCoords);
 	}
-	gl_FragColor=vec4(fcol.xyz,stop(fcol.w));//vec4(((normal/2.0)+0.5)*0.15,1);
+	gl_FragColor=vec4(fcol.xyz,stop(fcol.w)*alive);//vec4(((normal/2.0)+0.5)*0.15,1);
 }

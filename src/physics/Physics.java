@@ -29,6 +29,8 @@ import graphics.GraphicsInit;
 import graphics.RenderUtils;
 import graphics.Renderer;
 import logger.Logger;
+import objectTypes.GObject;
+import objectTypes.PhysicsObject;
 import objects.Player;
 import objects.PortalPair;
 import objects.Thing;
@@ -87,7 +89,7 @@ public class Physics {
 		for(RigidBodyEntry be : bodies) {
 			RigidBody b=be.b;
 			Vector3f cf=((Thing)b.getUserPointer()).getConstForce();
-			float mass=((Thing)b.getUserPointer()).geo.mass;
+			float mass=((Thing)b.getUserPointer()).geo.p.mass;
 			b.applyCentralForce(new Vector3f(cf.x*mass,cf.y*mass,cf.z*mass));
 			Thing thing=((Thing)b.getUserPointer());
 			thing.collisions.clear();
@@ -223,7 +225,10 @@ public class Physics {
 				if(f_nt2_2!=0) {
 					ac2=false;
 				}
-				Vector3f vel=(Vector3f)b.getLinearVelocity(new Vector3f()).clone();
+				
+				
+				Vector3f vel=(Vector3f)b.getLinearVelocity(linvel).clone();
+				vel.sub(pp.attached1.geo.p.body.getLinearVelocity(linvel1));
 				vel.scale(1.0f/RenderUtils.fr);
 				float len=vel.length();
 				vel.normalize();
@@ -234,7 +239,30 @@ public class Physics {
 				}
 				Vector3f npos=new Vector3f();
 				npos.add(pos,vel);
-				int f=pp.rayTest_sc(pos,npos,PortalPair.CLIP_SCALE);
+				int f1=pp.rayTest_sc(pos,npos,PortalPair.CLIP_SCALE);
+				
+				
+				vel=(Vector3f)b.getLinearVelocity(linvel).clone();
+				vel.sub(pp.attached2.geo.p.body.getLinearVelocity(linvel1));
+				vel.scale(1.0f/RenderUtils.fr);
+				len=vel.length();
+				vel.normalize();
+				if(len<PortalPair.VEL_MAG_STOP) {
+					vel.scale(PortalPair.VEL_CLIP_MULTIPLIER*len+PortalPair.CLIP_DISTANCE);
+				} else {
+					vel.scale(PortalPair.ALT_CLIP*len);
+				}
+				npos.add(pos,vel);
+				int f2=pp.rayTest_sc(pos,npos,PortalPair.CLIP_SCALE);
+				
+				int f=0;
+				if(f1==1||f1==3) {
+					f+=1;
+				}
+				if(f2==2||f2==3) {
+					f+=2;
+				}
+				
 				bthing.prevPos=(Vector3f)pos.clone();
 				boolean portaldbg=false;
 				if(f!=0) {
@@ -245,38 +273,36 @@ public class Physics {
 						continue;
 					}
 					((Thing)b.getUserPointer()).portalCounter=0;
-					if(f!=0) {
-						if(f==3) {
-							float rp1=Util.distance(pp.p1.origin,pos);
-							float rp2=Util.distance(pp.p2.origin,pos);
-							f=(rp1<rp2)?1:2;
-							Logger.log(0,"Dual portal clip, choosing "+f+" from distance.");
-						}
-						if(f==1?dot1>0:dot2>0) {Logger.log(0,"Cancelled portal "+f+" collision");continue;}
-						Logger.log(0,"PORTAL COLLISION: "+f);
-						Transform tr=b.getMotionState().getWorldTransform(new Transform());
-						Transform ntr=new Transform();
-						Transform mtr=f==1?pp.difference_inv():pp.difference();
-						if(portaldbg) {Logger.log(0,"Transform: "+mtr.origin);
-						Logger.log(0,"From this: "+tr.origin);}
-						Matrix4f tr_mat=tr.getMatrix(new Matrix4f());
-//						tr_mat.mul(tr_mat,new Matrix4f(mtr.getRotation(new Quat4f()),new Vector3f(0,0,0),1.0f));
-// 						tr_mat.mul(new Matrix4f(Util.AxisAngle(new AxisAngle4f(1,0,0,0)),mtr.origin,1.0f),tr_mat);
-						tr_mat.mul(mtr.getMatrix(new Matrix4f()),tr_mat);
-						ntr=new Transform(tr_mat);
-						if(portaldbg) {Logger.log(0,"To this: "+ntr.origin);}
-						b.setWorldTransform(ntr);
-						b.getMotionState().setWorldTransform(ntr);
-						lin_vel=(Vector3f)b.getLinearVelocity(new Vector3f()).clone();
-						if(portaldbg) {Logger.log(0,"Linear velocity: "+lin_vel);}
-						lin_vel.sub(f==1?pp.vel1:pp.vel2);
-						if(portaldbg) {Logger.log(0,"Relative linear velocity: "+lin_vel);}
-						Matrix3f trs=new Matrix3f();
-						mtr.getMatrix(new Matrix4f()).getRotationScale(trs);
-						trs.transform(lin_vel);
-						if(portaldbg) {Logger.log(0,"New linear velocity: "+lin_vel);}
-						b.setLinearVelocity(lin_vel);
+					if(f==3) {
+						float rp1=Util.distance(pp.p1.origin,pos);
+						float rp2=Util.distance(pp.p2.origin,pos);
+						f=(rp1<rp2)?1:2;
+						Logger.log(0,"Dual portal clip, choosing "+f+" from distance.");
 					}
+					if(f==1?dot1>0:dot2>0) {Logger.log(0,"Cancelled portal "+f+" collision");continue;}
+					Logger.log(0,"PORTAL COLLISION: "+f);
+					Transform tr=b.getMotionState().getWorldTransform(new Transform());
+					Transform ntr=new Transform();
+					Transform mtr=f==1?pp.difference_inv():pp.difference();
+					if(portaldbg) {Logger.log(0,"Transform: "+mtr.origin);
+					Logger.log(0,"From this: "+tr.origin);}
+					Matrix4f tr_mat=tr.getMatrix(new Matrix4f());
+					tr_mat.mul(mtr.getMatrix(new Matrix4f()),tr_mat);
+					ntr=new Transform(tr_mat);
+					if(portaldbg) {Logger.log(0,"To this: "+ntr.origin);}
+					b.setWorldTransform(ntr);
+					b.getMotionState().setWorldTransform(ntr);
+					lin_vel=(Vector3f)b.getLinearVelocity(new Vector3f()).clone();
+					if(portaldbg) {Logger.log(0,"Linear velocity: "+lin_vel);}
+					if((pp.attached1.geo.p.getTransformSource()!=PhysicsObject.PHYSICS)||(pp.attached2.geo.p.getTransformSource()!=PhysicsObject.PHYSICS)) {Logger.log(4,"Portal attachments need physics anchorings. Otherwise I'm dumb.");}
+					lin_vel.sub((f==1?pp.attached1:pp.attached2).geo.p.body.getLinearVelocity(new Vector3f()));
+					lin_vel.add((f==1?pp.attached2:pp.attached1).geo.p.body.getLinearVelocity(new Vector3f()));
+					if(portaldbg) {Logger.log(0,"Relative linear velocity: "+lin_vel);}
+					Matrix3f trs=new Matrix3f();
+					mtr.getMatrix(new Matrix4f()).getRotationScale(trs);
+					trs.transform(lin_vel);
+					if(portaldbg) {Logger.log(0,"New linear velocity: "+lin_vel);}
+					b.setLinearVelocity(lin_vel);
 				}
 			}
 			if(PortalPair.FUNNELING_ENABLE) {
@@ -344,7 +370,7 @@ public class Physics {
 				if(!pp.attached1.npflag2 && (pp.attached1!=pp.attached2)?ac1:(ac1 && ac2)) {
 					if(!pp.attached1.portalingCollisionsEnabled) {
 						pp.attached1.portalingCollisionsEnabled=true;
-						RigidBodyEntry entry=entrySearch(pp.attached1.geo.body);
+						RigidBodyEntry entry=entrySearch(pp.attached1.geo.p.body);
 						Physics.reAdd(entry,entry.group,pp.attached1.oshmask);
 						if(portalcoldbg) {Logger.log(0,"Added portal collisions to portal1 attachment: "+pp.attached1.type);}
 					}
@@ -352,7 +378,7 @@ public class Physics {
 					pp.attached1.npflag=true;
 					if(pp.attached1.portalingCollisionsEnabled) {
 						pp.attached1.portalingCollisionsEnabled=false;
-						RigidBodyEntry entry=entrySearch(pp.attached1.geo.body);
+						RigidBodyEntry entry=entrySearch(pp.attached1.geo.p.body);
 						pp.attached1.oshmask=entry.mask;
 						pp.attached1.oshgroup=entry.group;
 						Physics.reAdd(entry,entry.group,(short) (entry.mask & Thing.AWAYPORTAL));
@@ -362,7 +388,7 @@ public class Physics {
 				if(!pp.attached2.npflag2 && ac2 && (pp.attached1 != pp.attached2)) {
 					if(!pp.attached2.portalingCollisionsEnabled) {
 						pp.attached2.portalingCollisionsEnabled=true;
-						RigidBodyEntry entry=entrySearch(pp.attached2.geo.body);
+						RigidBodyEntry entry=entrySearch(pp.attached2.geo.p.body);
 						Physics.reAdd(entry,entry.group,pp.attached2.oshmask);
 						if(portalcoldbg) {Logger.log(0,"Added portal collisions to portal2 attachment: "+pp.attached2.type);}
 					}
@@ -370,7 +396,7 @@ public class Physics {
 					pp.attached2.npflag=true;
 					if(pp.attached2.portalingCollisionsEnabled) {
 						pp.attached2.portalingCollisionsEnabled=false;
-						RigidBodyEntry entry=entrySearch(pp.attached2.geo.body);
+						RigidBodyEntry entry=entrySearch(pp.attached2.geo.p.body);
 						pp.attached2.oshmask=entry.mask;
 						pp.attached2.oshgroup=entry.group;
 						Physics.reAdd(entry,entry.group,(short) (entry.mask & Thing.AWAYPORTAL));

@@ -18,10 +18,10 @@ import com.bulletphysics.collision.dispatch.CollisionWorld.RayResultCallback;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.Renderer;
 import lighting.Light;
 import lighting.Lighting;
+import objectTypes.GObject;
 import physics.Physics;
 import util.Util;
 

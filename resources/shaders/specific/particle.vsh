@@ -1,8 +1,6 @@
-#version 330 core
+#version 430 core
 #define pi 3.1415926535897932384
 
-
-uniform mat4 master_matrix=mat4(1.0);
 uniform mat4 world2view=mat4(1.0);
 uniform mat4 proj_matrix=mat4(1.0);
 uniform float altValue=0.15;
@@ -20,14 +18,36 @@ varying vec3 world_position;
 varying vec3 normal_orig;
 varying vec3 campos;
 varying vec4 intensity;
+varying float alive;
+
+struct Particle {
+	vec4 pos_active;
+	vec4 vel;
+};
+layout (std140) buffer particles_buffer {
+	Particle[] particles;
+};
+
+mat3 lookAt(vec3 origin, vec3 target, float roll) {
+	vec3 rr=vec3(sin(roll),cos(roll),0.0);
+	vec3 ww=normalize(target-origin);
+	vec3 uu=normalize(cross(ww,rr));
+	vec3 vv=normalize(cross(uu,ww));
+	return mat3(uu,vv,ww);
+}
+
+
 void main() {
 	campos=(inverse(world2view)[3]).xyz;
-	mat4 mvp=proj_matrix*world2view*master_matrix;
-	gl_Position=mvp*vec4(glv,1.0);
+	vec3 particleCenter=particles[gl_InstanceID].pos_active.xyz;
+	vec3 glvm=(lookAt(particleCenter,campos,0.0)*glv)+particleCenter;
+	world_position=glvm;
+	mat4 mvp=proj_matrix*world2view;
+	gl_Position=mvp*vec4(glvm,1.0);
 	texCoords=mtc0.st;
-	world_position=(master_matrix*vec4(glv,1.0)).xyz;
 	if(useLighting<1) {
 		intensity=vec4(altValue,altValue,altValue,1);
 	}
 	col=glc;
+	alive=particles[gl_InstanceID].pos_active.w;
 }

@@ -10,9 +10,9 @@ import com.bulletphysics.linearmath.Transform;
 import anim.AnimParser;
 import anim.AnimTrack;
 import audio.Sound;
-import graphics.GObject;
 import graphics.GraphicsInit;
 import graphics.Renderer;
+import objectTypes.GObject;
 
 public class FaithPlate extends Thing {
 	private static final long serialVersionUID = 1237435512380248141L;

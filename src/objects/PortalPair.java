@@ -1,6 +1,6 @@
 package objects;
 
-import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL46.*;
 
 import java.util.Arrays;
 import java.util.List;
@@ -13,11 +13,17 @@ import javax.vecmath.Vector3f;
 
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.RenderUtils;
 import graphics.Renderer;
 import graphics.Shader;
 import logger.Logger;
+import objectTypes.GObject;
+import objectTypes.PhysicsObject;
+import objectTypes.WorldObject;
+import particles.ParticleEmitter;
+import particles.ParticleSystem;
+import pooling.PoolElement;
+import pooling.Pools;
 import util.SaveStateComponent;
 import util.Util;
 
@@ -41,12 +47,14 @@ public class PortalPair extends Thing {
 	public static final boolean FUNNELING_ENABLE=true;
 	public static final float CLIP_SCALE=1.5f;
 	public static final float CLIP_DISTANCE=0.0f;
-	public static final float WALL_DISTANCE=0.005f;
+	public static final float WALL_DISTANCE=0.05f;
 	public static final float VEL_CLIP_MULTIPLIER=4.0f;
 	public static final float VEL_MAG_STOP=2.0f;
 	public static final float ALT_CLIP=2f;
 	public static final float OPENING_ANIM_LEN_MICROS=500000.0f;
-	public static final List<String> PASSES=Arrays.asList(new String[] {"Cube", "Player", "Pellet", "Turret"});
+	public static final float PORTAL_WIDTH=1.0f;
+	public static final float PORTAL_HEIGHT=1.8f;
+	public static final List<String> PASSES=Arrays.asList(new String[] {"Cube", "Player", "Pellet", "Turret", "Portable_wall"});
 	public transient Transform p1;
 	public transient Transform p2;
 	private transient Transform diff;
@@ -56,13 +64,13 @@ public class PortalPair extends Thing {
 	public Vector3f normal1=new Vector3f(0,0,-1);
 	public Vector3f normal2=new Vector3f(0,0,-1);
 	
-	public Vector3f vel1=new Vector3f(0,0,0);
-	public Vector3f vel2=new Vector3f(0,0,0);
-	
-	public transient GObject geo2;
-	private transient GObject geofx;
-	private transient GObject geo2fx;
+	public transient WorldObject geo2;
+	private transient WorldObject geofx;
+	private transient WorldObject geo2fx;
 	protected SaveStateComponent geo2ss;
+	
+	private transient ParticleSystem psys1;
+	private transient ParticleSystem psys2;
 	
 	@Thing.SerializeByID
 	public transient Thing attached1;
@@ -247,43 +255,66 @@ public class PortalPair extends Thing {
 //	}
 	public PortalPair() {
 		this.type="Portal_pair";
-		this.shape=new Vector3f(1,1.8f,0.1f); //shape.z - wall "thickness"
+		this.shape=new Vector3f(PortalPair.PORTAL_WIDTH,PortalPair.PORTAL_HEIGHT,0.1f); //shape.z - wall "thickness"
 		p1=new Transform(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))),new Vector3f(0,19,9.85f),1.0f));
 		p2=new Transform(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,19,-9.85f),1.0f));
 		isTest=false;
 		updateDifferences();
 	}
+	private transient Matrix3f mat3=new Matrix3f();
+	private transient Matrix4f i=new Matrix4f();
+	private transient Matrix4f t=new Matrix4f();
 	public void updateDifferences() {
-		Matrix4f i=new Matrix4f();
-		i.invert(p2.getMatrix(new Matrix4f()));
-		Matrix4f t=(Matrix4f)p1.getMatrix(new Matrix4f()).clone();
+		if(mat3==null) {mat3=new Matrix3f();}
+		if(i==null) {i=new Matrix4f();}
+		if(t==null) {t=new Matrix4f();}
 		
-		Matrix3f mat3=new Matrix3f();
+		p2.getMatrix(i);
+		i.invert();
+		p1.getMatrix(t);
+		
 		t.getRotationScale(mat3);
-		normal1=new Vector3f(0,0,-1);
+		normal1.set(0,0,-1);
 		mat3.transform(normal1);
 		normal1.normalize();
 		
-		t.mul(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,0,0),1.0f));
+		PoolElement<AxisAngle4f> aape=Pools.axisAngle4f.alloc();
+		PoolElement<Vector3f> v3pe=Pools.vector3f.alloc();
+		PoolElement<Matrix4f> m44=Pools.matrix4f.alloc();
+		
+		v3pe.o().set(0,0,0);
+		aape.o().set(0,1,0,(float)Math.toRadians(180));
+		PoolElement<Quat4f> quat=Util.AxisAngle(aape.o());
+		aape.free();
+		aape=null;
+		m44.o().set(quat.o(),v3pe.o(),1.0f);
+		quat.free();
+		quat=null;
+		v3pe.free();
+		v3pe=null;
+		t.mul(m44.o());
 		t.mul(i);
 		
-		diff=new Transform(t);
+		if(diff==null) {diff=new Transform();}
+		diff.set(t);
 		
 		//-------------------------------
 		
-		i=new Matrix4f();
-		i.invert(p1.getMatrix(new Matrix4f()));
-		t=(Matrix4f)p2.getMatrix(new Matrix4f()).clone();
+		p1.getMatrix(i);
+		i.invert();
+		p2.getMatrix(t);
 		
-		mat3=new Matrix3f();
 		t.getRotationScale(mat3);
-		normal2=new Vector3f(0,0,-1);
+		normal2.set(0,0,-1);
 		mat3.transform(normal2);
 		normal2.normalize();
 		
-		t.mul(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,0,0),1.0f));
+		t.mul(m44.o());
 		t.mul(i);
-		diffi=new Transform(t);
+		if(diffi==null) {diffi=new Transform();}
+		diffi.set(t);
+		m44.free();
+		m44=null;
 	}
 	public Transform difference() {
 		return diff;
@@ -297,8 +328,8 @@ public class PortalPair extends Thing {
 	public int rayTest_sc(Vector3f a, Vector3f b, float sc) {
 		Transform np1=new Transform(new Matrix4f(p1.getRotation(new Quat4f()),p1.origin,sc));
 		Transform np2=new Transform(new Matrix4f(p2.getRotation(new Quat4f()),p2.origin,sc));
-		boolean po1=geo.rayTest(a,b,np1);
-		boolean po2=geo2.rayTest(a,b,np2);
+		boolean po1=geo.g.rayTest(a,b,np1);
+		boolean po2=geo2.g.rayTest(a,b,np2);
 		if(po1 && !po2) {return 1;}
 		if(po2 && !po1) {return 2;}
 		if(po1 && po2) {return 3;}
@@ -312,6 +343,8 @@ public class PortalPair extends Thing {
 	private float fadeAnim=0;
 	@Override
 	public void logic() {
+//		psys1.stepParticles();
+//		psys2.stepParticles();
 		if(placed1 && placed2) {
 			if(!pplaced) {
 				placedMicros=RenderUtils.micros();
@@ -325,42 +358,66 @@ public class PortalPair extends Thing {
 			}
 		}
 		pplaced=placed1&&placed2;
-//		Vector3f mv1=(Vector3f)vel1.clone();
-//		mv1.scale(1/RenderUtils.fr);
-//		p1.mul(new Transform(new Matrix4f(Util.AxisAngle(new AxisAngle4f(1,0,0,0)),mv1,1.0f)));
-//		
-//		Vector3f mv2=(Vector3f)vel2.clone();
-//		mv2.scale(1/RenderUtils.fr);
-//		p2.mul(new Transform(new Matrix4f(Util.AxisAngle(new AxisAngle4f(1,0,0,0)),mv2,1.0f)));
+		if(attached1!=null) {handlePortalFollowing(attached1,1);}
+		if(attached2!=null) {handlePortalFollowing(attached2,2);}
+		updateDifferences();
+	}
+	private transient Matrix4f invertedCheckin;
+	private transient Transform trtemp;
+	private void handlePortalFollowing(Thing attached, int portal) {
+		if(invertedCheckin==null) {invertedCheckin=new Matrix4f();}
+		if(trtemp==null) {trtemp=new Transform();}
+		Matrix4f lastPortalCheckin=(portal==1)?attached.lastPortalCheckin1:attached.lastPortalCheckin2;
+		if(((portal==1)?attached.lastPortalCheckin1:attached.lastPortalCheckin2)==null) {
+			if(portal==1) {
+				attached.lastPortalCheckin1=new Matrix4f();
+			} else if(portal==2) {
+				attached.lastPortalCheckin2=new Matrix4f();
+			} else {
+				Logger.log(4,"What? Portal id was somehow "+portal);
+			}
+			lastPortalCheckin=(portal==1)?attached.lastPortalCheckin1:attached.lastPortalCheckin2;
+			attached.geo.p.getTransform().getMatrix(lastPortalCheckin);
+			return;
+		}
+		Transform tr=(portal==1)?p1:p2;
+		invertedCheckin.set(lastPortalCheckin);
+		invertedCheckin.invert();
+		trtemp.set(invertedCheckin);
+		tr.mul(trtemp,tr);
+		tr.mul(attached.geo.p.getTransform(),tr);
+		attached.geo.p.getTransform().getMatrix(lastPortalCheckin);
 	}
 	@Override
 	public void initVBO() {
-		geo.initVBO();
-		geo2.initVBO();
-		geofx.initVBO();
-		geo2fx.initVBO();
+		geo.g.initVBO();
+		geo2.g.initVBO();
+		geofx.g.initVBO();
+		geo2fx.g.initVBO();
 	}
 	@Override
 	public void refresh() {
-		geo.refresh();
-		geo2.refresh();
-		geofx.refresh();
-		geo2fx.refresh();
+		geo.g.refresh();
+		geo2.g.refresh();
+		geofx.g.refresh();
+		geo2fx.g.refresh();
 	}
 	@Override
 	public void alphaRender() {
 		glDepthMask(false);
 		if(placed1) {
-			this.geofx.getRenderingShader().bind();
-			this.geofx.getRenderingShader().setUniform1f("offset",2.3459837459f);
-			this.geofx.highRender_noPushPop_customTransform(p1);
+			this.geofx.g.getRenderingShader().bind();
+			this.geofx.g.getRenderingShader().setUniform1f("offset",2.3459837459f);
+			this.geofx.g.highRender_noPushPop_customTransform(p1);
 		}
 		if(placed2) {
-			this.geo2fx.getRenderingShader().bind();
-			this.geo2fx.getRenderingShader().setUniform1f("offset",0f);
-			this.geo2fx.highRender_noPushPop_customTransform(p2);
+			this.geo2fx.g.getRenderingShader().bind();
+			this.geo2fx.g.getRenderingShader().setUniform1f("offset",0f);
+			this.geo2fx.g.highRender_noPushPop_customTransform(p2);
 		}
 		glDepthMask(true);
+//		psys1.render();
+//		psys2.render();
 	}
 	@Override
 	public void render() {
@@ -383,17 +440,17 @@ public class PortalPair extends Thing {
 	public void render(int p) {
 		if(p==1) {
 			if(placed1) {
-				this.geo.getRenderingShader().bind();
-				this.geo.getRenderingShader().setUniform1f("offset",2.3459837459f);
-				this.geo.getRenderingShader().setUniform1f("block",Math.min(fadeAnim,1.0f));
-				this.geo.highRender_noPushPop_customTransform(p1);
+				this.geo.g.getRenderingShader().bind();
+				this.geo.g.getRenderingShader().setUniform1f("offset",2.3459837459f);
+				this.geo.g.getRenderingShader().setUniform1f("block",Math.min(fadeAnim,1.0f));
+				this.geo.g.highRender_noPushPop_customTransform(p1);
 			}
 		} else if(p==2) {
 			if(placed2) {
-				this.geo2.getRenderingShader().bind();
-				this.geo.getRenderingShader().setUniform1f("offset",0f);
-				this.geo.getRenderingShader().setUniform1f("block",Math.min(fadeAnim,1.0f));
-				this.geo2.highRender_noPushPop_customTransform(p2);
+				this.geo2.g.getRenderingShader().bind();
+				this.geo.g.getRenderingShader().setUniform1f("offset",0f);
+				this.geo.g.getRenderingShader().setUniform1f("block",Math.min(fadeAnim,1.0f));
+				this.geo2.g.highRender_noPushPop_customTransform(p2);
 			}
 		}
 	}
@@ -405,45 +462,60 @@ public class PortalPair extends Thing {
 	}
 	@Override
 	public void initGeo() {
-		this.geo=new GObject();
-		this.geo2=new GObject();
-		this.geofx=new GObject();
-		this.geo2fx=new GObject();
-		this.geo.useTex=true;
-		this.geo2.useTex=true;
-		this.geofx.useTex=false;
-		this.geo2fx.useTex=false;
-		this.geo.loadOBJ("portal/portal_plane","3d/portal/portal.png");
-		this.geo2.loadOBJ("portal/portal_plane","3d/portal/portal.png");
-		this.geofx.loadOBJ("portal/portal_fx");
-		this.geo2fx.loadOBJ("portal/portal_fx");
+//		psys1=new ParticleSystem();
+//		psys2=new ParticleSystem();
+//		
+//		ParticleEmitter e1=new ParticleEmitter(new Vector3f(5,2,0),0.0f,new Vector3f(-1,-1,-1),200,new Vector3f(2,2,2));
+//		ParticleEmitter e2=new ParticleEmitter(new Vector3f(-5,2,0),0.0f,new Vector3f(-1,-1,-1),200,new Vector3f(2,2,2));
+//		psys1.addEmitter(e1);
+//		psys2.addEmitter(e2);
+//		
+//		psys1.lock();
+//		psys2.lock();
+//		
+//		psys1.initialize();
+//		psys2.initialize();
+		
+//		psys1.setActive(false);
+//		psys2.setActive(false);
+		
+		this.geo=new WorldObject(true);
+		this.geo2=new WorldObject(true);
+		this.geofx=new WorldObject(true,false);
+		this.geo2fx=new WorldObject(true,false);
+		this.geo.g.useTex=true;
+		this.geo2.g.useTex=true;
+		this.geofx.g.useTex=false;
+		this.geo2fx.g.useTex=false;
+		this.geo.g.loadOBJ("portal/portal_plane","3d/portal/portal.png");
+		this.geo2.g.loadOBJ("portal/portal_plane","3d/portal/portal.png");
+		this.geofx.g.loadOBJ("portal/portal_fx");
+		this.geo2fx.g.loadOBJ("portal/portal_fx");
 		float i=16.6f;
 		float i2=6.6f;
-		this.geo2.setColor(i,i*0.10f,0);
-		this.geo.setColor(0,i*0.14f,i);
-		this.geo2fx.setColor(i2,i2*0.10f,0,0.2f);
-		this.geofx.setColor(0,i2*0.20f,i2,0.8f);
-		this.geo.useLighting=false;
-		this.geo2.useLighting=false;
-		this.geofx.useLighting=false;
-		this.geo2fx.useLighting=false;
+		this.geo2.g.setColor(i,i*0.10f,0);
+		this.geo.g.setColor(0,i*0.14f,i);
+		this.geo2fx.g.setColor(i2,i2*0.10f,0,0.2f);
+		this.geofx.g.setColor(0,i2*0.20f,i2,0.8f);
+		this.geo.g.useLighting=false;
+		this.geo2.g.useLighting=false;
+		this.geofx.g.useLighting=false;
+		this.geo2fx.g.useLighting=false;
 		
-		this.geofx.useCulling=false;
-		this.geo2fx.useCulling=false;
+		this.geofx.g.useCulling=false;
+		this.geo2fx.g.useCulling=false;
 		
-		this.geo.scale(1,1.8f,1);
-		this.geo2.scale(1,1.8f,1);
-		this.geofx.scale(1,1.8f,1);
-		this.geo2fx.scale(1,1.8f,1);
+		this.geo.g.scale(shape.x,shape.y,1);
+		this.geo2.g.scale(shape.x,shape.y,1);
+		this.geofx.g.scale(shape.x,shape.y,1);
+		this.geo2fx.g.scale(shape.x,shape.y,1);
 		
-		geo.lock();
-		geo2.lock();
-		geofx.lock();
-		geo2fx.lock();
-		geo.setMotionSource(GObject.NONE);
-		geo2.setMotionSource(GObject.NONE);
-		geofx.setMotionSource(GObject.NONE);
-		geo2fx.setMotionSource(GObject.NONE);
+		geo.g.lock();
+		geo2.g.lock();
+		geofx.g.lock();
+		geo2fx.g.lock();
+		geo.p.setMotionSource(PhysicsObject.NONE);
+		geo2.p.setMotionSource(PhysicsObject.NONE);
 		declareResource(geo2);
 		declareResource(geofx);
 		declareResource(geo2fx);
@@ -451,10 +523,10 @@ public class PortalPair extends Thing {
 		Shader portalShader=new Shader("specific/portal");
 		Shader portalFXShader=new Shader("specific/portalfx");
 		
-		geo.setRenderingShader(portalShader);
-		geo2.setRenderingShader(portalShader);
-		geofx.setRenderingShader(portalFXShader);
-		geo2fx.setRenderingShader(portalFXShader);
+		geo.g.setRenderingShader(portalShader);
+		geo2.g.setRenderingShader(portalShader);
+		geofx.g.setRenderingShader(portalFXShader);
+		geo2fx.g.setRenderingShader(portalFXShader);
 	}
 	@Override
 	public void addPhysics() {

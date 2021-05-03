@@ -17,8 +17,8 @@ import javax.vecmath.Vector3f;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.Renderer;
+import objectTypes.GObject;
 import util.Util;
 
 public class Shooter extends Thing {

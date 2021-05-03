@@ -7,19 +7,15 @@ import static org.lwjgl.opengl.GL46.*;
 //import static org.lwjgl.openvr.VRSystem.*;
 import static org.lwjgl.system.MemoryStack.*;
 
-import org.lwjgl.BufferUtils;
 //import org.lwjgl.openvr.OpenVR;
 import org.lwjgl.system.*;
 
-import java.awt.Color;
-import java.nio.FloatBuffer;
+import particles.*;
+
 import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.HashSet;
 
 import javax.vecmath.AxisAngle4f;
-import javax.vecmath.Matrix4f;
-import javax.vecmath.Quat4f;
 import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 
@@ -29,20 +25,15 @@ import audio.Audio;
 import chamber.Chamber;
 import game.SaveState;
 import graphics.handlers.BloomHandler;
-import graphics.handlers.RTXDataCoordinator;
 import graphics.handlers.SSAOHandler;
 import lighting.Light;
 import lighting.Lighting;
 import logger.Logger;
 import objects.*;
-import particles.Particle;
-import particles.ParticleEmitter;
-import particles.ParticleWorld;
 import physics.InputHandler;
 import physics.Movement;
 import physics.Physics;
 import physics.State;
-import pooling.PoolElement;
 import pooling.PoolStrainer;
 import util.ComputeShader;
 import util.TextureCache;
@@ -99,7 +90,6 @@ public class Renderer {
 		activeWindow=win;
 		Physics.initPhysics();
 		GraphicsInit.InitGraphics(win);
-		ParticleWorld.init();
 		stack=stackPush();
 		
 		Audio.init();
@@ -156,12 +146,14 @@ public class Renderer {
 		//test.add(new FaithPlate(new Vector3f(4,0.04f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),new Vector3f(0,20,0)));
 		test.add(new Wall(new Vector2f(50,10), new Vector3f(0,0,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
+		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
 		//((Door)hld).setAttached(test.add(new Wall(new Vector2f(10,10), new Vector3f(10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90))))));
 		//test.add(new Fizzler(new Vector2f(2,2), new Vector3f(5,2,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90)))));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(-10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(270)))));
-		//test.add(new Cube(new Vector3f(0,1,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),2));
+		//test.add(new PortableWall(new Vector3f(0,6,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40)))));
+		test.add(new Cube(new Vector3f(0,5,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),Cube.NORMAL));
+		//test.add(new ParticleThing(new ParticleEmitter(new Vector3f(0,2,0),0.0f,new Vector3f(-1,-1,-1),200,new Vector3f(2,2,2))));
 		//test.add(new Cube(new Vector3f(0,2,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
 		//test.add(new Cube(new Vector3f(0,3,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
 		//test.add(new Shooter(new Vector3f(-1,5.15f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270))),40000,true));
@@ -199,12 +191,10 @@ public class Renderer {
 		Shader screen=new Shader("screen");
 		Shader screen_basic=new Shader("screen_basic");
 		Screen blindfold=new Screen();
-		ComputeShader rtx=new ComputeShader("rtx");
 		main.bind();
 		FrameBuffer fbo=new FrameBuffer(16,4,GL_RGBA16F);
 		FrameBuffer interfbo=new FrameBuffer(0,2,GL_RGBA16F);
 		FrameBuffer ssaoFBO=new FrameBuffer(0);
-		FrameBuffer RTXFBO=new FrameBuffer(0);
 		FrameBuffer ssaoMulFBO=new FrameBuffer(0);
 		FrameBuffer interfbo2=new FrameBuffer(0,2,GL_RGBA8);
 		FrameBuffer interfbo3=new FrameBuffer(0,1,GL_RGBA8);
@@ -280,48 +270,20 @@ public class Renderer {
 				thing.clearActivations();
 			}
 			activeTex=null;
-//			activeAtlas.atlas_tex.upload();
-//			activeAtlas.atlas_tex.bind();
-//			for(Thing thing : things) {
-//				thing.refresh();
-//			}
-//			pp.refresh();
-			//RENDER:
-//			pp.apply();
-//			for(Thing thing : things) { //Render step
-//				renderRoutine(thing,0);
-//			}
-//			for(Thing thing : things) { //Render step
-//				alphaRenderRoutine(thing,0);
-//			}
-//			pp.alphaRender();
-//			glStencilFunc(GL_ALWAYS,128,0xFF);
-//			//renderRoutine(pp,0);
-//			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-//			END
-			RTXFBO.bind();
-			glClearColor(0,0,0,1);
-			glClear(GL_COLOR_BUFFER_BIT);
-			RTXFBO.bindImage(0);
-			rtx.bind();
-			RTXDataCoordinator.handleSSBOData(rtx);
-			rtx.applyAllSSBOs();
-			rtx.dispatch(winW,winH,1);
 			
-			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			pp.apply();
+			for(Thing thing : things) { //Render step
+				renderRoutine(thing,0);
+			}
+			for(Thing thing : things) { //Render step
+				alphaRenderRoutine(thing,0);
+			}
+			pp.alphaRender();
+			glStencilFunc(GL_ALWAYS,128,0xFF);
+			//renderRoutine(pp,0);
+			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
 			
-			glClearStencil(128);
-			glPopMatrix();
 			
-			glDisable(GL_DEPTH_TEST);
-			FrameBuffer.unbind_all();
-			fbo.bind();
-			screen_basic.bind();
-			RTXFBO.bindTexture(0);
-			blindfold.render();
-			glEnable(GL_DEPTH_TEST);
-			
-			//SSAOHandler.runSSAOTo(fbo,1,2,ssaoFBO,0);
 			fbo.blitTo(interfbo,0,0);
 			//fbo.blitTo(ssaoMulFBO,3,0);
 			interfbo2.bind();
@@ -366,10 +328,12 @@ public class Renderer {
 			//int targ_delta=1000000/(targ_fr+1); //Target frame time (us)
 			//while(micros()-t1 < targ_delta) {} //Accurate sleep routine (to regulate framerate)
 			
-			float ufp=(micros()-t1);
-			ufr=1000000.0f/ufp;
+			
 			glfwSwapBuffers(win);//Enforce V-SYNC
 			//Bunch o' stuff about framerate
+			float ufp=(micros()-t1);
+			ufr=1000000.0f/ufp;
+			
 			fp=(micros()-t1);
 			fr=1000000.0f/fp; //Calculate framerate and framerate compensation
 			frc=fr/60.0f;

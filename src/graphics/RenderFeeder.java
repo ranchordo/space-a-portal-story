@@ -21,10 +21,11 @@ public class RenderFeeder {
 		for(Thing t : chamber.stuff) {
 			Renderer.things.add(t);
 			if(t.geo==null) {continue;}
-			if(t.geo.vmap==null) {continue;}
-			if(t.geo.vmap.tex==null) {continue;}
-			if(!t.geo.vmap.tex.name.equals("")) {continue;}
-			Renderer.activeCache.cache.add(t.geo.vmap.tex);
+			if(t.geo.g==null) {continue;}
+			if(t.geo.g.vmap==null) {continue;}
+			if(t.geo.g.vmap.tex==null) {continue;}
+			if(!t.geo.g.vmap.tex.name.equals("")) {continue;}
+			Renderer.activeCache.cache.add(t.geo.g.vmap.tex);
 		}
 	}
 	

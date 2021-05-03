@@ -5,7 +5,7 @@ import javax.vecmath.Vector3f;
 
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 
-import graphics.GObject;
+import objectTypes.GObject;
 
 public class LaserReceiver extends Thing {
 	private static final long serialVersionUID = 1237435512380248141L;

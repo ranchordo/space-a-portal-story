@@ -12,11 +12,11 @@ import javax.vecmath.Vector3f;
 
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.GraphicsInit;
 import graphics.Renderer;
 import graphics.Tri;
 import logger.Logger;
+import objectTypes.GObject;
 
 public class Fizzler extends Thing {
 	public static final List<String> FIZZLES=Arrays.asList(new String[] {"Cube", "Pellet", "Turret"});
@@ -62,8 +62,7 @@ public class Fizzler extends Thing {
 		geo.transformVariable=tr;
 		geo.lock();
 		geo.setMotionSource(GObject.VARIABLE);
-		this.stopsPortals=true;
-		this.portalable=true;
+		this.portalable=false;
 		geo.useLighting=false;
 
 		this.geo.vmap.tex.colorLoaded=true;

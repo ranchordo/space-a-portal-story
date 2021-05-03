@@ -9,8 +9,8 @@ import javax.vecmath.Vector3f;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.GObject;
 import graphics.Renderer;
+import objectTypes.GObject;
 
 public class PelletCatcher extends Thing {
 	private static final long serialVersionUID = 1237435512380248141L;
