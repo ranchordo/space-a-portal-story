@@ -90,7 +90,8 @@ public class Physics {
 			RigidBody b=be.b;
 			Vector3f cf=((Thing)b.getUserPointer()).getConstForce();
 			float mass=((Thing)b.getUserPointer()).geo.p.mass;
-			b.applyCentralForce(new Vector3f(cf.x*mass,cf.y*mass,cf.z*mass));
+			linvel.set(cf.x*mass,cf.y*mass,cf.z*mass);
+			b.applyCentralForce(linvel);
 			Thing thing=((Thing)b.getUserPointer());
 			thing.collisions.clear();
 			thing.collisionVels.clear();
