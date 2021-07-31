@@ -5,8 +5,7 @@ description: >-
 github_username:  ranchordo
 
 # Build settings
-theme: minima
-#l-mistakes-jekyll
+theme: minimal-mistakes-jekyll
 plugins:
   - jekyll-feed
   - jekyll-include-cache
