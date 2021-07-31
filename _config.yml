@@ -4,8 +4,7 @@ description: >-
   The official site for Space - A Portal Story, an upcoming community made portal game.
 github_username:  ranchordo
 
-# Build settings
-theme: minimal-mistakes-jekyll
+theme: minimal
 plugins:
   - jekyll-feed
   - jekyll-include-cache
