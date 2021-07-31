@@ -18,15 +18,13 @@ import com.bulletphysics.collision.shapes.CollisionShape;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
+import game.Main;
+import static game.Main.in;
 import game.SaveState;
-import graphics.GraphicsInit;
-import graphics.Renderer;
-import graphics.Tri;
-import logger.Logger;
-import objectTypes.GObject;
-import objectTypes.WorldObject;
-import physics.Physics;
-import util.Util;
+import lepton.engine.physics.WorldObject;
+import lepton.engine.rendering.Tri;
+import lepton.util.LeptonUtil;
+import lepton.util.advancedLogger.Logger;
 
 public class Player extends Thing {
 	private static final long serialVersionUID = 1458724178644370708L;
@@ -46,7 +44,6 @@ public class Player extends Thing {
 		this.type="Player";
 		this.origin=origin;
 		this.quat=quat;
-		this.isTest=false;
 		this.portalsIgnore=true;
 	}
 	public void handleNewSSPP(PortalPair pp) {
@@ -54,12 +51,12 @@ public class Player extends Thing {
 	}
 	public void setRotY(float angrad) {
 		this.geo.p.body.setWorldTransform(new Transform(new Matrix4f(
-				Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,angrad))),
+				LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,angrad))),
 				this.geo.p.body.getWorldTransform(new Transform()).origin,1.0f)));
 	}
 	public void rotY(float angrad) {
 		Matrix4f mat=this.geo.p.body.getWorldTransform(new Transform()).getMatrix(new Matrix4f());
-		Matrix4f transmat=new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,angrad))),new Vector3f(0,0,0),1.0f);
+		Matrix4f transmat=new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,angrad))),new Vector3f(0,0,0),1.0f);
 		transmat.mul(mat,transmat);
 		this.geo.p.body.setWorldTransform(new Transform(transmat));
 	}
@@ -75,7 +72,13 @@ public class Player extends Thing {
 		transmat.mul(transmat,mat);
 		this.geo.p.body.setWorldTransform(new Transform(transmat));
 	}
+	private transient Transform b;
+	private transient Vector3f c;
+	private transient Vector3f d;
 	public void updateOnFloor() {
+		if(b==null) {b=new Transform();}
+		if(c==null) {c=new Vector3f();}
+		if(d==null) {d=new Vector3f();}
 		RayResultCallback f=new RayResultCallback() {
 			@Override
 			public float addSingleResult(LocalRayResult res, boolean b) {
@@ -85,15 +88,16 @@ public class Player extends Thing {
 			
 		};
 		rayTest=0;
-		Vector3f pos=GraphicsInit.player.geo.p.body.getWorldTransform(new Transform()).origin;
-		Physics.dynamicsWorld.rayTest(new Vector3f(
+		Vector3f pos=this.geo.p.body.getWorldTransform(new Transform()).origin;
+		c.set(
 				pos.x+(height/2)*currDown.x*(1-floor_thshld),
 				pos.y+(height/2)*currDown.y*(1-floor_thshld),
-				pos.z+(height/2)*currDown.z*(1-floor_thshld)),
-				new Vector3f(
-						pos.x+(height/2)*currDown.x*(1+floor_thshld),
-						pos.y+(height/2)*currDown.y*(1+floor_thshld),
-						pos.z+(height/2)*currDown.z*(1+floor_thshld)),f);
+				pos.z+(height/2)*currDown.z*(1-floor_thshld));
+		d.set(
+				pos.x+(height/2)*currDown.x*(1+floor_thshld),
+				pos.y+(height/2)*currDown.y*(1+floor_thshld),
+				pos.z+(height/2)*currDown.z*(1+floor_thshld));
+		getPhysicsWorld().dynamicsWorld.rayTest(c,d,f);
 		if(rayTest>0) {
 			onFloor=true;
 		} else {
@@ -106,9 +110,9 @@ public class Player extends Thing {
 	public void setGodMode(boolean godmode) {
 		inGodMode=godmode;
 		if(godmode) {
-			Physics.reAdd(this.geo.p.body,Thing.NOTHING,Thing.NOTHING);
+			getPhysicsWorld().reAdd(this.geo.p.body,Thing.NOTHING,Thing.NOTHING);
 		} else {
-			Physics.reAdd(this.geo.p.body,Thing.PLAYER ,Thing.PLAYER );
+			getPhysicsWorld().reAdd(this.geo.p.body,Thing.PLAYER ,Thing.PLAYER );
 		}
 		this.setUsesGravity(!godmode);
 	}
@@ -124,7 +128,7 @@ public class Player extends Thing {
 		}
 		Vector3f pt=new Vector3f(0,0,-1);
 		Matrix3f rs=new Matrix3f();
-		Renderer.camera.getInvTransform().getMatrix(trmat).getRotationScale(rs);
+		Main.camera.getInvTransform().getMatrix(trmat).getRotationScale(rs);
 		tr=geo.p.getTransform();
 		perms[0].set(shape.x,0,0);
 		perms[1].set(-shape.x,0,0);
@@ -146,17 +150,17 @@ public class Player extends Thing {
 		}
 		rs.invert();
 		rs.transform(pt);
-		Vector3f targ_world=(Vector3f)Renderer.camera.pos_out.clone();
+		Vector3f targ_world=(Vector3f)Main.camera.pos_out.clone();
 		targ_world.add(pt);
 		Tri cdt=null;
 		Thing cdt_thing=null;
 		float minDistance=Tri.CLIP_DISTANCE+2;
-		for(Thing thing : Renderer.things) {
+		for(Thing thing : Main.things) {
 			if(thing.geo==null) {continue;}
 			if(thing.geo.p.body==null) {continue;}
 			if(thing.portalsIgnore) {continue;}
 			//float f=thing.geo.rayTest_distance(Renderer.camera.pos_out,targ_world,thing.geo.body.getMotionState().getWorldTransform(new Transform()));
-			Tri t=thing.geo.g.rayTest_closest(Renderer.camera.pos_out,targ_world,thing.geo.p.body.getMotionState().getWorldTransform(new Transform()));
+			Tri t=thing.geo.g.rayTest_closest(Main.camera.pos_out,targ_world,thing.geo.p.body.getMotionState().getWorldTransform(new Transform()));
 			if(t!=null) {
 				float f=t.raytest_t;
 				if(f>=0-1e-6) {
@@ -193,8 +197,8 @@ public class Player extends Thing {
 			angrad+=(float)Math.PI;
 //			intersection.scale(cdt.raytest_t);
 //			intersection.add(Renderer.camera.pos_out);
-			Logger.log(1,"Fire Portal "+portal);
-			Transform newtrans=new Transform(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(inter_axis.x,inter_axis.y,inter_axis.z,-angrad))),intersection,1.0f));
+//			Logger.log(0,"Fire Portal "+portal);
+			Transform newtrans=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(inter_axis.x,inter_axis.y,inter_axis.z,-angrad))),intersection,1.0f));
 			if(portal==1) {
 				portalPair.placed1=true;
 				portalPair.p1=newtrans;
@@ -259,7 +263,7 @@ public class Player extends Thing {
 		}
 		if(in.ir(GLFW_KEY_L)) {
 			SaveState testIn=SaveState.input();
-			Renderer.scheduledReplacement=testIn;
+			Main.scheduledReplacement=testIn;
 		}
 		this.geo.p.body.getMotionState().getWorldTransform(new Transform()).getMatrix(mat);
 		mat.getRotationScale(mat1);
@@ -267,16 +271,16 @@ public class Player extends Thing {
 		mat1.transform(currDown);
 		//currDown=(Vector3f)Physics.getGravity().clone();
 		currDown.normalize();
-		float grav_angle=Physics.getGravity().angle(currDown);
-		inter_axis.cross(Physics.getGravity(),this.currDown);
+		float grav_angle=getPhysicsWorld().getGravity().angle(currDown);
+		inter_axis.cross(getPhysicsWorld().getGravity(),this.currDown);
 		if(grav_angle==0) {
 			inter_axis.set(0,-1,0);
 		}
 		inter_axis.normalize();
 		mat1.invert();
 		mat1.transform(inter_axis);
-		pendingtransform.set(Util.noPool(Util.AxisAngle(new AxisAngle4f(inter_axis.x,inter_axis.y,inter_axis.z,-grav_angle*0.02f))),nothing,1.0f);
-		//Matrix4f pendingtransform=new Matrix4f(Util.AxisAngle(new AxisAngle4f(1,0,0,0.01f)),new Vector3f(0,0,0),1.0f);
+		pendingtransform.set(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(inter_axis.x,inter_axis.y,inter_axis.z,-grav_angle*0.02f))),nothing,1.0f);
+		//Matrix4f pendingtransform=new Matrix4f(LeptonUtil.AxisAngle(new AxisAngle4f(1,0,0,0.01f)),new Vector3f(0,0,0),1.0f);
 		this.transform(pendingtransform);
 		this.geo.p.getTransform().getMatrix(inverseTransform);
 		inverseTransform.invert();
@@ -286,10 +290,14 @@ public class Player extends Thing {
 	public Vector3f getCurrDown() {
 		return currDown;
 	}
+	private static transient Transform a;
 	public Vector3f getCameraPositioning() {
-		Vector3f center=this.geo.p.body.getWorldTransform(new Transform()).origin;
+		if(a==null) {a=new Transform();}
+		Vector3f center=this.geo.p.body.getWorldTransform(a).origin;
 		Vector3f currUp=(Vector3f)currDown.clone();
+		currUp.normalize();
 		currUp.scale(-(height/2.0f)*0.8f);
+//		currUp.scale(0.0f);
 		currUp.add(center);
 		return currUp;
 	}
@@ -297,7 +305,7 @@ public class Player extends Thing {
 	public void render() {}
 	@Override
 	public void alphaRender() {
-		if(Renderer.activePortalTransform==0) {
+		if(Main.activePortalTransform==0) {
 			return;
 		}
 		//this.geo.highRender();
@@ -314,14 +322,14 @@ public class Player extends Thing {
 		this.geo.p.doBody(body);
 		this.geo.p.body.setActivationState(CollisionObject.DISABLE_DEACTIVATION);
 		this.geo.p.body.setAngularFactor(0);
-		this.currDown=Physics.getGravity();
+		this.currDown=new Vector3f();
+		this.currDown.set(getPhysicsWorld().getGravity());
 	}
 	@Override
 	public void initGeo() {
 		initGeo_nopp();
 		this.portalPair=new PortalPair();
 		this.portalPair.init();
-		this.portalPair.isTest=false;
 	}
 	public void initGeo_nopp() {
 		this.geo=new WorldObject(true);

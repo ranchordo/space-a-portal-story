@@ -12,15 +12,12 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-import chamber.Chamber;
-import graphics.GraphicsInit;
-import graphics.Renderer;
-import lighting.Lighting;
-import logger.Logger;
+import lepton.engine.rendering.lighting.Lighting;
+import lepton.util.LeptonUtil;
+import lepton.util.advancedLogger.Logger;
 import objects.Player;
 import objects.PortalPair;
 import objects.Thing;
-import util.Util;
 
 public class SaveState implements Serializable {
 	private static final long serialVersionUID = -8268014585329721063L;
@@ -31,7 +28,7 @@ public class SaveState implements Serializable {
 	public void output() {
 		Logger.log(0,"Saving savestate to /save.state");
 		try {
-			String complete_fname=Util.getExternalPath()+"/save.state";
+			String complete_fname=LeptonUtil.getExternalPath()+"/save.state";
 			File creation=new File(complete_fname);
 			creation.createNewFile();
 			FileOutputStream scr_output=new FileOutputStream(complete_fname);
@@ -49,7 +46,7 @@ public class SaveState implements Serializable {
 	}
 	public static SaveState input() {
 		Lighting.clear();
-		String complete_fname=Util.getExternalPath()+"/save.state";
+		String complete_fname=LeptonUtil.getExternalPath()+"/save.state";
 		InputStream inStream=null;
 		try {
 			inStream=new FileInputStream(complete_fname);
@@ -82,15 +79,15 @@ public class SaveState implements Serializable {
 	public void create() {
 		Logger.log(0,"Copying data to savestate");
 		currentEnvironment=new Chamber();
-		for(Thing thing : Renderer.things) {
+		for(Thing thing : Main.things) {
 			if(!excludes.contains(thing.type)) {
 				thing.doSaveState();
 				currentEnvironment.add(thing);
 			}
 		}
-		GraphicsInit.player.doSaveState();
-		GraphicsInit.player.portalPair.doSaveState();
-		currentPlayer=GraphicsInit.player;
-		portalPair=GraphicsInit.player.portalPair;
+		PlayerInitializer.player.doSaveState();
+		PlayerInitializer.player.portalPair.doSaveState();
+		currentPlayer=PlayerInitializer.player;
+		portalPair=PlayerInitializer.player.portalPair;
 	}
 }

@@ -1,10 +1,9 @@
 package objects;
 
-import static org.lwjgl.opengl.GL46.*;
+import static org.lwjgl.opengl.GL15.*;
 
 import java.util.Arrays;
 import java.util.List;
-
 import javax.vecmath.AxisAngle4f;
 import javax.vecmath.Matrix3f;
 import javax.vecmath.Matrix4f;
@@ -13,19 +12,16 @@ import javax.vecmath.Vector3f;
 
 import com.bulletphysics.linearmath.Transform;
 
-import graphics.RenderUtils;
-import graphics.Renderer;
-import graphics.Shader;
-import logger.Logger;
-import objectTypes.GObject;
-import objectTypes.PhysicsObject;
-import objectTypes.WorldObject;
-import particles.ParticleEmitter;
-import particles.ParticleSystem;
-import pooling.PoolElement;
-import pooling.Pools;
+import game.Main;
+import lepton.engine.physics.PhysicsObject;
+import lepton.engine.physics.WorldObject;
+import lepton.engine.rendering.GLContextInitializer;
+import lepton.engine.rendering.Shader;
+import lepton.optim.objpoollib.DefaultVecmathPools;
+import lepton.optim.objpoollib.PoolElement;
+import lepton.util.LeptonUtil;
+import lepton.util.advancedLogger.Logger;
 import util.SaveStateComponent;
-import util.Util;
 
 public class PortalPair extends Thing {
 	//Stencil space partitioning:
@@ -69,8 +65,8 @@ public class PortalPair extends Thing {
 	private transient WorldObject geo2fx;
 	protected SaveStateComponent geo2ss;
 	
-	private transient ParticleSystem psys1;
-	private transient ParticleSystem psys2;
+//	private transient ParticleSystem psys1;
+//	private transient ParticleSystem psys2;
 	
 	@Thing.SerializeByID
 	public transient Thing attached1;
@@ -102,13 +98,13 @@ public class PortalPair extends Thing {
 		glClear(GL_DEPTH_BUFFER_BIT);
 		if(offset>STENCIL_ITERATIONS) {return;}
 //		glColorMask(false,false,false,false);
-//		Renderer.useGraphics=false;
+//		Main.useGraphics=false;
 //		glStencilFunc(GL_EQUAL,128,0xFF);
 //		glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-//		for(Thing thing : Renderer.things) { //       Render a depth pass
-//			Renderer.renderRoutine(thing,stop(portal+(2*offset)-2));
+//		for(Thing thing : Main.things) { //       Render a depth pass
+//			Main.renderRoutine(thing,stop(portal+(2*offset)-2));
 //		}
-//		Renderer.useGraphics=true;
+//		Main.useGraphics=true;
 //		glColorMask(true, true, true, true);
 		
 		
@@ -122,44 +118,44 @@ public class PortalPair extends Thing {
 		}
 		
 		glColorMask(false,false,false,false);
-		Renderer.useGraphics=false;
-		Renderer.portalRenderRoutine(this,stop(portal+(2*offset)-2),portal); //              Render portal into stencil and depth
+		GLContextInitializer.useGraphics=false;
+		Main.portalRenderRoutine(this,stop(portal+(2*offset)-2),portal); //              Render portal into stencil and depth
 		
 //		if(offset!=0) {glStencilFunc(GL_EQUAL,offset+1+base,0xFF);}
 //		else {glStencilFunc(GL_EQUAL,offset+1+base,0xFF);}
 //		glStencilOp(GL_KEEP,GL_KEEP,GL_DECR);
-//		for(Thing thing : Renderer.things) { //       Inversely render our parent's reality to the stencil buffer
-//			Renderer.renderRoutine(thing,stop(portal+(2*offset)-2));
+//		for(Thing thing : Main.things) { //       Inversely render our parent's reality to the stencil buffer
+//			Main.renderRoutine(thing,stop(portal+(2*offset)-2));
 //		}
 //		glClear(GL_DEPTH_BUFFER_BIT);
 //		for(int i=1;i<offset+1;i++) {
 //			glStencilFunc(GL_ALWAYS,i+1+base,0xFF);
 //			glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
-//			for(Thing thing : Renderer.things) { //       Render a depth pass
-//				Renderer.renderRoutine(thing,stop(portal+(2*i)-2));
+//			for(Thing thing : Main.things) { //       Render a depth pass
+//				Main.renderRoutine(thing,stop(portal+(2*i)-2));
 //			}
 //		}
 		glColorMask(true, true, true, true);
-		Renderer.useGraphics=true;
+		GLContextInitializer.useGraphics=true;
 		
 		this.drawInsides(portal,offset+1); //Recurse
 		
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glStencilFunc(GL_EQUAL,offset+1+base,0xFF);
 		glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-		for(Thing thing : Renderer.things) { //                 Fake render step
-			Renderer.renderRoutine(thing,portal+(2*offset));
+		for(Thing thing : Main.things) { //                 Fake render step
+			Main.renderRoutine(thing,portal+(2*offset));
 		}
-		for(Thing thing : Renderer.things) { //                 Fake render step
-			Renderer.alphaRenderRoutine(thing,portal+(2*offset));
+		for(Thing thing : Main.things) { //                 Fake render step
+			Main.alphaRenderRoutine(thing,portal+(2*offset));
 		}
 		
-		Renderer.portalRenderRoutine(this,stop(portal+(2*offset)-2),portal);
+		Main.portalRenderRoutine(this,stop(portal+(2*offset)-2),portal);
 		
 //		glStencilFunc(GL_LEQUAL,offset+1+base,0xFF);
-//		for(Thing thing : Renderer.things) { //       Render our reality on top
-//			Renderer.renderRoutine(thing,stop(portal+(2*offset)-2));
-//			Renderer.alphaRenderRoutine(thing,stop(portal+(2*offset)-2));
+//		for(Thing thing : Main.things) { //       Render our reality on top
+//			Main.renderRoutine(thing,stop(portal+(2*offset)-2));
+//			Main.alphaRenderRoutine(thing,stop(portal+(2*offset)-2));
 //		}
 		
 		glClear(GL_DEPTH_BUFFER_BIT);
@@ -181,27 +177,27 @@ public class PortalPair extends Thing {
 		}
 		
 		glColorMask(false,false,false,false);
-		Renderer.useGraphics=false;
-		Renderer.portalRenderRoutine(this,outside,portal); //              Render portal into stencil and depth
+		GLContextInitializer.useGraphics=false;
+		Main.portalRenderRoutine(this,outside,portal); //              Render portal into stencil and depth
 		
 		glColorMask(true, true, true, true);
-		Renderer.useGraphics=true;
+		GLContextInitializer.useGraphics=true;
 		
 		this.drawInsides(portal,offset+1); //Recurse
 		
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glStencilFunc(GL_EQUAL,offset+1+base,0xFF);
 		glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-		for(Thing thing : Renderer.things) { //                 Fake render step
-			Renderer.renderRoutine(thing,inside);
+		for(Thing thing : Main.things) { //                 Fake render step
+			Main.renderRoutine(thing,inside);
 		}
-		for(Thing thing : Renderer.things) { //                 Fake render step
-			Renderer.alphaRenderRoutine(thing,inside);
+		for(Thing thing : Main.things) { //                 Fake render step
+			Main.alphaRenderRoutine(thing,inside);
 		}
-		Renderer.alphaRenderRoutine(this,inside);
+		Main.alphaRenderRoutine(this,inside);
 		glStencilFunc(GL_EQUAL,offset+1+base,0xFF);
-		Renderer.portalRenderRoutine(this,outside,portal);
-		glStencilFunc(GL_EQUAL,0,0xFF);
+		Main.portalRenderRoutine(this,outside,portal);
+//		glStencilFunc(GL_EQUAL,0,0xFF);
 		glStencilFunc(GL_ALWAYS,0x00,0xFF);
 	}
 	private void drawInsides_old(int portal, int offset) {
@@ -215,31 +211,31 @@ public class PortalPair extends Thing {
 		glStencilFunc(GL_ALWAYS,0x01,0xFF);
 		glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
 		glDepthMask(false);
-		Renderer.portalRenderRoutine(this,outside,portal);
+		Main.portalRenderRoutine(this,outside,portal);
 		glStencilFunc(GL_ALWAYS,0x02,0xFF);
-		Renderer.portalRenderRoutine(this,inside,portal);
+		Main.portalRenderRoutine(this,inside,portal);
 		glDepthMask(true);
 		glColorMask(true, true, true, true);
 		glStencilFunc(GL_EQUAL,0x01,0xFF);
 		glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-		for(Thing thing : Renderer.things) {
-			Renderer.renderRoutine(thing,inside);
+		for(Thing thing : Main.things) {
+			Main.renderRoutine(thing,inside);
 		}
-		for(Thing thing : Renderer.things) {
-			Renderer.alphaRenderRoutine(thing,inside);
+		for(Thing thing : Main.things) {
+			Main.alphaRenderRoutine(thing,inside);
 		}
-		Renderer.alphaRenderRoutine(this,inside);
+		Main.alphaRenderRoutine(this,inside);
 		glStencilFunc(GL_ALWAYS,0x00,0xFF);
-		Renderer.portalRenderRoutine(this,outside,portal);
+		Main.portalRenderRoutine(this,outside,portal);
 	}
 	public void portal(int portal) {
 		drawInsides(portal,0);
 		glColorMask(false,false,false,false);
-		Renderer.useGraphics=false;
-		Renderer.portalRenderRoutine(this,0,1);
-		Renderer.portalRenderRoutine(this,0,2);
+		GLContextInitializer.useGraphics=false;
+		Main.portalRenderRoutine(this,0,1);
+		Main.portalRenderRoutine(this,0,2);
 		glColorMask(true, true, true, true);
-		Renderer.useGraphics=true;
+		GLContextInitializer.useGraphics=true;
 	}
 	private int stop(int v) {
 		if(v<0) {return 0;}
@@ -256,9 +252,8 @@ public class PortalPair extends Thing {
 	public PortalPair() {
 		this.type="Portal_pair";
 		this.shape=new Vector3f(PortalPair.PORTAL_WIDTH,PortalPair.PORTAL_HEIGHT,0.1f); //shape.z - wall "thickness"
-		p1=new Transform(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))),new Vector3f(0,19,9.85f),1.0f));
-		p2=new Transform(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,19,-9.85f),1.0f));
-		isTest=false;
+		p1=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))),new Vector3f(0,19,9.85f),1.0f));
+		p2=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,19,-9.85f),1.0f));
 		updateDifferences();
 	}
 	private transient Matrix3f mat3=new Matrix3f();
@@ -278,13 +273,13 @@ public class PortalPair extends Thing {
 		mat3.transform(normal1);
 		normal1.normalize();
 		
-		PoolElement<AxisAngle4f> aape=Pools.axisAngle4f.alloc();
-		PoolElement<Vector3f> v3pe=Pools.vector3f.alloc();
-		PoolElement<Matrix4f> m44=Pools.matrix4f.alloc();
+		PoolElement<AxisAngle4f> aape=DefaultVecmathPools.axisAngle4f.alloc();
+		PoolElement<Vector3f> v3pe=DefaultVecmathPools.vector3f.alloc();
+		PoolElement<Matrix4f> m44=DefaultVecmathPools.matrix4f.alloc();
 		
 		v3pe.o().set(0,0,0);
 		aape.o().set(0,1,0,(float)Math.toRadians(180));
-		PoolElement<Quat4f> quat=Util.AxisAngle(aape.o());
+		PoolElement<Quat4f> quat=LeptonUtil.AxisAngle(aape.o());
 		aape.free();
 		aape=null;
 		m44.o().set(quat.o(),v3pe.o(),1.0f);
@@ -347,12 +342,12 @@ public class PortalPair extends Thing {
 //		psys2.stepParticles();
 		if(placed1 && placed2) {
 			if(!pplaced) {
-				placedMicros=RenderUtils.micros();
+				placedMicros=LeptonUtil.micros();
 				fadeAnim=0;
 			}
 		}
 		if(placedMicros!=-1) {
-			fadeAnim=(RenderUtils.micros()-placedMicros)/OPENING_ANIM_LEN_MICROS;
+			fadeAnim=(LeptonUtil.micros()-placedMicros)/OPENING_ANIM_LEN_MICROS;
 			if(fadeAnim>=1) {
 				placedMicros=-1;
 			}
@@ -389,31 +384,17 @@ public class PortalPair extends Thing {
 		attached.geo.p.getTransform().getMatrix(lastPortalCheckin);
 	}
 	@Override
-	public void initVBO() {
-		geo.g.initVBO();
-		geo2.g.initVBO();
-		geofx.g.initVBO();
-		geo2fx.g.initVBO();
-	}
-	@Override
-	public void refresh() {
-		geo.g.refresh();
-		geo2.g.refresh();
-		geofx.g.refresh();
-		geo2fx.g.refresh();
-	}
-	@Override
 	public void alphaRender() {
 		glDepthMask(false);
 		if(placed1) {
 			this.geofx.g.getRenderingShader().bind();
 			this.geofx.g.getRenderingShader().setUniform1f("offset",2.3459837459f);
-			this.geofx.g.highRender_noPushPop_customTransform(p1);
+			this.geofx.g.highRender_customTransform(p1);
 		}
 		if(placed2) {
 			this.geo2fx.g.getRenderingShader().bind();
 			this.geo2fx.g.getRenderingShader().setUniform1f("offset",0f);
-			this.geo2fx.g.highRender_noPushPop_customTransform(p2);
+			this.geo2fx.g.highRender_customTransform(p2);
 		}
 		glDepthMask(true);
 //		psys1.render();
@@ -431,33 +412,34 @@ public class PortalPair extends Thing {
 			return;
 		}
 		if(placed1) {
-			Renderer.portalRenderRoutine(this,0,1);
+			Main.portalRenderRoutine(this,0,1);
 		}
 		if(placed2) {
-			Renderer.portalRenderRoutine(this,0,2);
+			Main.portalRenderRoutine(this,0,2);
 		}
 	}
 	public void render(int p) {
+//		System.out.println(fadeAnim);
 		if(p==1) {
 			if(placed1) {
 				this.geo.g.getRenderingShader().bind();
 				this.geo.g.getRenderingShader().setUniform1f("offset",2.3459837459f);
 				this.geo.g.getRenderingShader().setUniform1f("block",Math.min(fadeAnim,1.0f));
-				this.geo.g.highRender_noPushPop_customTransform(p1);
+				this.geo.g.highRender_customTransform(p1);
 			}
 		} else if(p==2) {
 			if(placed2) {
 				this.geo2.g.getRenderingShader().bind();
-				this.geo.g.getRenderingShader().setUniform1f("offset",0f);
-				this.geo.g.getRenderingShader().setUniform1f("block",Math.min(fadeAnim,1.0f));
-				this.geo2.g.highRender_noPushPop_customTransform(p2);
+				this.geo2.g.getRenderingShader().setUniform1f("offset",0f);
+				this.geo2.g.getRenderingShader().setUniform1f("block",Math.min(fadeAnim,1.0f));
+				this.geo2.g.highRender_customTransform(p2);
 			}
 		}
 	}
 	@Override
 	public void initPhysics() {
-		p1=new Transform(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))),new Vector3f(0,19,9.85f),1.0f));
-		p2=new Transform(new Matrix4f(Util.noPool(Util.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,19,-9.85f),1.0f));
+		p1=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))),new Vector3f(0,19,9.85f),1.0f));
+		p2=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,19,-9.85f),1.0f));
 		updateDifferences();
 	}
 	@Override
@@ -487,10 +469,10 @@ public class PortalPair extends Thing {
 		this.geo2.g.useTex=true;
 		this.geofx.g.useTex=false;
 		this.geo2fx.g.useTex=false;
-		this.geo.g.loadOBJ("portal/portal_plane","3d/portal/portal.png");
-		this.geo2.g.loadOBJ("portal/portal_plane","3d/portal/portal.png");
-		this.geofx.g.loadOBJ("portal/portal_fx");
-		this.geo2fx.g.loadOBJ("portal/portal_fx");
+		this.geo.g.loadOBJ("assets/3d/portal/portal_plane","assets/3d/portal/portal","png");
+		this.geo2.g.loadOBJ("assets/3d/portal/portal_plane","assets/3d/portal/portal","png");
+		this.geofx.g.loadOBJ("assets/3d/portal/portal_fx");
+		this.geo2fx.g.loadOBJ("assets/3d/portal/portal_fx");
 		float i=16.6f;
 		float i2=6.6f;
 		this.geo2.g.setColor(i,i*0.10f,0);
@@ -516,9 +498,9 @@ public class PortalPair extends Thing {
 		geo2fx.g.lock();
 		geo.p.setMotionSource(PhysicsObject.NONE);
 		geo2.p.setMotionSource(PhysicsObject.NONE);
-		declareResource(geo2);
-		declareResource(geofx);
-		declareResource(geo2fx);
+		initGObject(geo2);
+		initGObject(geofx);
+		initGObject(geo2fx);
 		
 		Shader portalShader=new Shader("specific/portal");
 		Shader portalFXShader=new Shader("specific/portalfx");
@@ -527,6 +509,8 @@ public class PortalPair extends Thing {
 		geo2.g.setRenderingShader(portalShader);
 		geofx.g.setRenderingShader(portalFXShader);
 		geo2fx.g.setRenderingShader(portalFXShader);
+		
+//		System.out.println(geo.g.vmap.tex.get(0));
 	}
 	@Override
 	public void addPhysics() {

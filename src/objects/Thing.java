@@ -1,5 +1,7 @@
 package objects;
 
+import static lepton.engine.physics.WorldObject.pnull;
+
 import java.io.Serializable;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -9,10 +11,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import javax.swing.text.Segment;
 import javax.vecmath.Matrix3f;
 import javax.vecmath.Matrix4f;
 import javax.vecmath.Point3f;
-import javax.vecmath.SingularMatrixException;
 import javax.vecmath.Vector3f;
 
 import com.bulletphysics.collision.dispatch.CollisionWorld.LocalRayResult;
@@ -20,25 +22,21 @@ import com.bulletphysics.collision.dispatch.CollisionWorld.RayResultCallback;
 import com.bulletphysics.dynamics.RigidBody;
 import com.bulletphysics.linearmath.Transform;
 
-import audio.Soundtrack;
-import audio.SourcePool;
-import graphics.GraphicsInit;
-import graphics.Renderer;
-import graphics.Shader;
-import logger.Logger;
-import objectTypes.GObject;
-import objectTypes.PhysicsObject;
-import objectTypes.WorldObject;
-import physics.InputHandler;
-import physics.Physics;
-import portalcasting.Segment;
+import game.Main;
+import game.PlayerInitializer;
+import graphics.PortalViewMatrixModifier;
+import lepton.engine.audio.Soundtrack;
+import lepton.engine.audio.SourcePool;
+import lepton.engine.physics.PhysicsObject;
+import lepton.engine.physics.PhysicsWorld;
+import lepton.engine.physics.RigidBodyEntry;
+import lepton.engine.physics.UserPointerStructure;
+import lepton.engine.physics.WorldObject;
+import lepton.util.advancedLogger.Logger;
 import util.SaveStateComponent;
 
-import static objectTypes.WorldObject.gnull;
-import static objectTypes.WorldObject.anull;
-import static objectTypes.WorldObject.pnull;
-
 public abstract class Thing implements Serializable {
+	public static PhysicsWorld defaultPhysicsWorld;
 	protected static final long serialVersionUID = 8139848476402960972L;
 	
 	public static int PORTAL_IMMUNITY=30;
@@ -59,85 +57,138 @@ public abstract class Thing implements Serializable {
 		}
 		
 	};
-	public static void runRayTest() {
+	private static transient Vector3f a=new Vector3f();
+	public static void runRayTest(PhysicsWorld physicsWorld) {
 		rayTest=new ArrayList<LocalRayResult>();
 		Vector3f pt=new Vector3f(0,0,-2);
 		Matrix3f rs=new Matrix3f();
-		Renderer.camera.getTransform().getMatrix(new Matrix4f()).getRotationScale(rs);
+		Main.camera.getTransform().getMatrix(new Matrix4f()).getRotationScale(rs);
 		rs.transform(pt);
-		Physics.dynamicsWorld.rayTest(Renderer.camera.pos_out,new Vector3f(
-				Renderer.camera.pos_out.x+pt.x,
-				Renderer.camera.pos_out.y+pt.y,
-				Renderer.camera.pos_out.z+pt.z)  ,f);
+		a.set(
+				Main.camera.pos_out.x+pt.x,
+				Main.camera.pos_out.y+pt.y,
+				Main.camera.pos_out.z+pt.z);
+		physicsWorld.dynamicsWorld.rayTest(Main.camera.pos_out,a,f);
 	}
+	private transient PhysicsWorld physicsWorld=defaultPhysicsWorld;
 	private HashMap<String,Integer> IdFieldAssoc;
-	private transient ArrayList<WorldObject> resources;
+	private transient ArrayList<WorldObject> gobjects;
 	protected SaveStateComponent saveStateComponent;
 	protected transient Soundtrack soundtrack;
 	public transient SourcePool sourcePool;
 	protected static ArrayList<LocalRayResult> rayTest=new ArrayList<LocalRayResult>();
+	
 	protected boolean funnelPrevUseGravity=true;
 	public boolean funnelInFunnel=false;
 	public transient Segment funnelActiveSegment=new Segment();
 	protected boolean funnelCheckYes=false;
+	
 	protected boolean gravity=true;
+	
 	public boolean portalable=false;
 	public boolean portalsIgnore=false;
 	public boolean portalingCollisionsEnabled=true;
+	
 	public boolean npflag=false;
 	public boolean npflag2=false;
+	
 	public short oshmask=0;
 	public short oshgroup=0;
+	
+	public int id;
+	
 	public transient Matrix4f lastPortalCheckin1;
 	public transient Matrix4f lastPortalCheckin2;
+	
 	protected Vector3f constForce=new Vector3f(0,0,0);
-	public boolean isTest=true;
+	
+//	public boolean isTest=true;
 	public boolean doPhysicsOnSerialization=true;
+	
 	public transient WorldObject geo;
+	
 	public String type;
 	protected Vector3f shape;
+	
 	public Vector3f prevPos=new Vector3f();
+	
 	public short group=EVERYTHING;
-	public int id;
+	
+//	public int id;
+	
 	public int portalCounter;
-	protected transient InputHandler in;
-	public abstract void initPhysics();
-	public abstract void initGeo();
+	
+	
+	public void initPhysics() {}
+	public void initGeo() {}
 	public void initSoundtrack() {}
+	
 	protected boolean interacted=false;
 	public void processInteraction() {}
-	public void logic() {portalCounter++;} //What do we do if we're activated?
+	
+	public void logic() {} //What do we do if we're activated?
+	public final void requiredLogic() {
+		portalCounter++;
+		if(this.geo==null) {return;}
+		tranVectorPointer.set(this.geo.p.getTransform().origin);
+		//System.out.println("B "+tranVectorPointer);
+		PlayerInitializer.player.getInverseTransform().transform(tranVectorPointer);
+		//System.out.println("A "+tranVectorPointer);
+		this.sourcePool.logic(tranVectorPointer);
+	}
+	
 	public void applyBackForce() {
 		if(this.geo==null) {return;}
 		if(this.geo.p.body==null) {return;}
-		if(this.geo.p.dynamic) {this.geo.p.body.applyCentralForce(constForce);}
+		this.geo.p.body.applyCentralForce(constForce);
 	}
+	
 	public void processActivation() {} //Process the following: Should we send out activations?
 	public boolean sendingActivations=false;
 	public int activations=0;
-	public void generic_init() {}
 	public transient HashSet<Thing> activates=new HashSet<Thing>();
 	public HashSet<Integer> activates_ser=new HashSet<Integer>();
 	public int activationThreshold=1;
+	public final void clearActivations() {this.activations=0; this.pcasterHits=0; this.sendingActivations=false;}
+	public void sendActivations() {
+		if(sendingActivations) {
+			for(Thing t : activates) {
+				t.activations+=1;
+			}
+		}
+	}
+	public Thing setActivationThshld(int i) {
+		this.activationThreshold=i;
+		return this;
+	}
+	
 	private int portalAttached=0;
-	//public int selectionStage=0; //0: None. 1: Candidate. 2: Selected.
+	
 	public int pcasterHits=0;
 	public boolean pcasterSendOnHit=false;
+	
 	public transient ArrayList<Thing> collisions;
 	public transient ArrayList<Float> collisionVels;
 	public transient ArrayList<Thing> pcollisions;
-	public final void clearActivations() {this.activations=0; this.pcasterHits=0; this.sendingActivations=false;}
+	
 	private static Point3f tranVectorPointer=new Point3f();
 	public boolean useModifiedCollision=false;
-	public boolean runCollisionRayTest(Vector3f pos) {return false;}
-	public void setAttachedNPCollisionFlag(boolean in) {}
+	
+//	public boolean runCollisionRayTest(Vector3f pos) {return false;}
+	
+//	public void setAttachedNPCollisionFlag(boolean in) {}
+	
 	public ArrayList<WorldObject> getResources() {
-		return resources;
+		return gobjects;
 	}
-	public void declareResource(WorldObject geo2) {
+	
+	public void initGObject(WorldObject geo2) {
 		if(geo2==null) {return;}
-		resources.add(geo2);
+		gobjects.add(geo2);
+		PortalViewMatrixModifier p=new PortalViewMatrixModifier();
+		geo2.g.viewMatrixModifier=p;
 	}
+	public boolean exemptFromChamberFeed=false;
 	public void doSaveState() { //Due to a mandatory test protocol, we will stop taking transforms in constructors in 3, 2, 1.
 		if(pnull(this.geo) || this.geo.p.getTransformSource()!=PhysicsObject.PHYSICS) {return;}
 		saveStateComponent=new SaveStateComponent();
@@ -146,52 +197,21 @@ public abstract class Thing implements Serializable {
 		this.geo.p.getTransform().getMatrix(saveStateComponent.transform);
 		this.geo.p.body.getLinearVelocity(saveStateComponent.velocity);
 	}
-	public final void requiredLogic() {
-		if(this.geo==null) {return;}
-		tranVectorPointer.set(this.geo.p.getTransform().origin);
-		//System.out.println("B "+tranVectorPointer);
-		GraphicsInit.player.getInverseTransform().transform(tranVectorPointer);
-		//System.out.println("A "+tranVectorPointer);
-		this.sourcePool.logic(tranVectorPointer);
-	}
-	public void sendActivations() {
-		if(sendingActivations) {
-			for(Thing t : activates) {
-				t.activations+=1;
-			}
-		}
-	}
-//	public void clearSelectionStage(int i) {
-//		if(i==0) {
-//			selectionStage=0;
-//		} else {
-//			if(selectionStage==i) {
-//				selectionStage=0;
-//			}
-//		}
-//	}
-//	public void handleSelectionStage() {
-//		if(this.geo==null) {return;}
-//		if(selectionStage==2) {
-//			this.geo.wireframe=true;
-//		} else {
-//			this.geo.wireframe=false;
-//		}
-//	}
+	
 	public Thing addToActivates(Thing in) {
 		this.activates.add(in);
 		return this;
 	}
+	
 	public Thing setPortalAttached(int i) { //DEBUG METHOD, only for testing hard-coded portal positioning
 		this.portalAttached=i;
 		return this;
 	}
-	public Thing setActivationThshld(int i) {
-		this.activationThreshold=i;
-		return this;
-	}
 	public void refresh() {
 		geo.g.refresh();
+		for(WorldObject g : gobjects) {
+			g.g.refresh();
+		}
 	}
 	public void render() {
 		if(!this.geo.g.hasAlpha) {this.geo.highRender();}
@@ -199,8 +219,10 @@ public abstract class Thing implements Serializable {
 	public void alphaRender() {
 		if(this.geo.g.hasAlpha) {this.geo.highRender();}
 	}
-	protected void onSerializationAdditional() {} //Trump just got sworn out of office. I have no idea why I'm typing that here, but I am so happy.
+	protected void onSerializationAdditional() {}
+	
 	public final void onSerialization() {
+		physicsWorld=defaultPhysicsWorld;
 		this.init();
 		if(doPhysicsOnSerialization) {
 			this.addPhysics();
@@ -208,6 +230,7 @@ public abstract class Thing implements Serializable {
 		unpackSaveState();
 		onSerializationAdditional();
 	}
+	
 	public void unpackSaveState() {
 		if(this.saveStateComponent!=null) {
 			if(this.geo.p.getTransformSource()==PhysicsObject.PHYSICS) {
@@ -217,22 +240,29 @@ public abstract class Thing implements Serializable {
 			}
 		}
 	}
+	
 	public void addPhysics() {
 		addPhysics(group,Thing.EVERYTHING);
 		if(portalAttached==1) {
-			((Player)GraphicsInit.player).portalPair.attached1=this;
+			PlayerInitializer.player.portalPair.attached1=this;
 			Logger.log(0,"Setting portal attached 1 to type "+type);
 		} else if(portalAttached==2) {
-			((Player)GraphicsInit.player).portalPair.attached2=this;
+			PlayerInitializer.player.portalPair.attached2=this;
 			Logger.log(0,"Setting portal attached 2 to type "+type);
 		}
 	}
+	protected void addPhysics(WorldObject w, short group, short mask) {
+		w.p.addToSimulation(group,mask,physicsWorld);
+		((UserPointerStructure)w.p.body.getUserPointer()).addUserPointer("thing",this);
+	}
 	public void addPhysics(short group, short mask) {
-		this.geo.p.addToSimulation(group,mask);
-		this.geo.p.body.setUserPointer(this);
+		addPhysics(geo,group,mask);
 	}
 	public void initVBO() {
 		geo.g.initVBO();
+		for(WorldObject g : gobjects) {
+			g.g.initVBO();
+		}
 	}
 	public void interact() {
 		this.interacted=false;
@@ -248,7 +278,7 @@ public abstract class Thing implements Serializable {
 		if(this.geo!=null) {
 			prevPos=geo.p.getTransform().origin;
 		}
-		resources=new ArrayList<WorldObject>();
+		gobjects=new ArrayList<WorldObject>();
 		collisions=new ArrayList<Thing>();
 		pcollisions=new ArrayList<Thing>();
 		collisionVels=new ArrayList<Float>();
@@ -256,13 +286,11 @@ public abstract class Thing implements Serializable {
 		sourcePool=new SourcePool(this.type);
 		soundtrack=new Soundtrack();
 		funnelActiveSegment=new Segment();
-		in=new InputHandler(Renderer.activeWindow);
-		this.generic_init();
 		this.initGeo();
 		this.initPhysics();
 		this.initSoundtrack();
 		initVBO();
-		declareResource(geo);
+		initGObject(geo);
 		
 		refresh();
 		refreshGravity();
@@ -270,12 +298,24 @@ public abstract class Thing implements Serializable {
 	public final void clean() {
 		sourcePool.free();
 		sourcePool.die();
-		for(WorldObject g : resources) {
+		for(WorldObject g : gobjects) {
 			g.g.clean();
 			if(g.p.body!=null) {
-				Physics.remove(g.p.body);
+				physicsWorld.remove(g.p.body);
 			}
 		}
+	}
+	public PhysicsWorld getPhysicsWorld() {
+		return physicsWorld;
+	}
+	public void setPhysicsWorld(WorldObject w, PhysicsWorld p) {
+		RigidBodyEntry e=PhysicsWorld.getEntryFromRigidBody(this.geo.p.body);
+		physicsWorld.remove(e.b);
+		p.add(e);
+		physicsWorld=p;
+	}
+	public void setPhysicsWorld(PhysicsWorld p) {
+		setPhysicsWorld(geo,p);
 	}
 	public Vector3f getShape() {
 		return shape;
@@ -284,7 +324,7 @@ public abstract class Thing implements Serializable {
 		if(this.geo==null) {return;}
 		if(this.geo.p.body==null) {return;}
 		if(!this.gravity) {
-			Vector3f g=Physics.getGravity();
+			Vector3f g=physicsWorld.getGravity();
 			constForce=new Vector3f(-g.x,-g.y,-g.z);
 		} else {
 			constForce=new Vector3f(0,0,0);

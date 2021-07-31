@@ -1,7 +1,7 @@
 package objects;
 
-import lighting.Light;
-import lighting.Lighting;
+import lepton.engine.rendering.lighting.Light;
+import lepton.engine.rendering.lighting.Lighting;
 
 public class LightingConfiguration extends Thing {
 	private static final long serialVersionUID = -7979784390699090641L;

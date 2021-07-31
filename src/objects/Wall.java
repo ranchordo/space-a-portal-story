@@ -11,18 +11,17 @@ import com.bulletphysics.collision.shapes.BoxShape;
 import com.bulletphysics.collision.shapes.CollisionShape;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 
-import graphics.Texture;
-import graphics.Tri;
-import logger.Logger;
-import objectTypes.GObject;
-import objectTypes.WorldObject;
+import lepton.engine.physics.WorldObject;
+import lepton.engine.rendering.Texture;
+import lepton.engine.rendering.Tri;
+import lepton.util.advancedLogger.Logger;
 
 public class Wall extends Thing {
 	private static final long serialVersionUID = -4731923936294407139L;
 	public static final int SINGLE=0;
 	public static final int DOUBLE=1;
 	public static final int ALL=2;
-	public static final String[] textures=new String[] {"3d/wall/cropped_border.jpg","3d/wall/cropped_border.jpg","3d/wall/cropped_border.jpg"};
+	public static final String[] textures=new String[] {"3d/wall/cropped_border","3d/wall/cropped_border","3d/wall/cropped_border"};
 	private Vector3f origin;
 	private Quat4f quat;
 	public Vector2f aspect=new Vector2f(1,1.6f);
@@ -64,7 +63,6 @@ public class Wall extends Thing {
 		this.geo=new WorldObject(true);
 		//this.geo.vmap.tex=walltex;
 		this.geo.g.useTex=true;
-		this.geo.g.useBump=false;
 		this.geo.g.vmap.vertices=new ArrayList<Vector3f>();
 		this.geo.g.vmap.vertices.add(new Vector3f(-getShape().x,-getShape().y,-getShape().z));
 		this.geo.g.vmap.vertices.add(new Vector3f(+getShape().x,-getShape().y,-getShape().z));
@@ -119,9 +117,8 @@ public class Wall extends Thing {
 		
 		geo.g.lock();
 
-		this.geo.g.vmap.tex.colorLoaded=true;
 		try {
-			this.geo.g.loadTexture(textures[textureType]);
+			this.geo.g.loadTexture("assets/"+textures[textureType],"jpg");
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -129,15 +126,14 @@ public class Wall extends Thing {
 		if(textureType==2) {
 			try {
 				this.geo.g.vmap.tex=new Texture(this.geo.g.vmap.tex);
-				this.geo.g.vmap.tex.reset(Texture.BUMP);
 				this.geo.g.vmap.tex.reset(Texture.NORMAL);
-				this.geo.g.vmap.tex.create_norm("3d/wall/cropped_border_normal_detail.jpg");
+				this.geo.g.vmap.tex.create(1,"assets/3d/wall/cropped_border_normal_detail",".jpg");
 			} catch (FileNotFoundException e) {
 				Logger.log(4,e.toString(),e);
 			}
 		}
-		if(this.geo.g.vmap.tex.normLoaded) {
-			this.geo.g.useBump=true;
-		}
+//		if(this.geo.g.vmap.tex.normLoaded) {
+//			this.geo.g.useBump=true;
+//		}
 	}
 }
