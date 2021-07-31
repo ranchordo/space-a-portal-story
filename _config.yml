@@ -7,3 +7,5 @@ github_username:  ranchordo
 theme: minima
 plugins:
   - jekyll-feed
+minima:
+  skin: dark
