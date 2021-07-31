@@ -1,3 +1,6 @@
 *.dat
 *.prefs
 *.zip
+*.log
+.project
+.classpath
