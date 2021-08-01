@@ -1,11 +1,26 @@
 title: Space - A Portal Story
-email: spaceaps@gmail.com
-description: The official site for Space - A Portal Story, an upcoming community made portal game.
-github_username:  ranchordo
+author:
+  name: Ray Anchordoquy, Graham Blocher, and Reed Upson
+  email: spaceapstory@gmail.com
+description: The official site for "Space - A Portal Story", an upcoming community made portal game.
+github_username: ranchordo
+
+url: https://ranchordo.github.io/space-a-portal-story
+
+permalink: pretty
 
 # Build settings
-theme: minima
+remote_theme: jekyll/minima
+
+show_excerpts: false
+header_pages:
+  - about.md
+  - updates.md
 plugins:
   - jekyll-feed
+  - jekyll-remote-theme
 minima:
   skin: dark
+  social_links:
+    twitter: spaceapstory
+    github: ranchordo
