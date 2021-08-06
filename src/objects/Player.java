@@ -21,6 +21,7 @@ import com.bulletphysics.linearmath.Transform;
 import game.Main;
 import static game.Main.in;
 import game.SaveState;
+import lepton.engine.physics.PhysicsWorld;
 import lepton.engine.physics.WorldObject;
 import lepton.engine.rendering.Tri;
 import lepton.util.LeptonUtil;
@@ -141,8 +142,8 @@ public class Player extends Thing {
 			tr.transform(p);
 		}
 		int g=0;
-		for(int i=0;i<2;i++) {
-			g+=portalPair.rayTest_sc(perms[2*i],perms[(2*i)+1],PortalPair.CLIP_SCALE);
+		for(int i=0;i<3;i++) {
+			g+=portalPair.rayTest(perms[2*i],perms[(2*i)+1]);
 		}
 		if(g>0) {
 			Logger.log(0,"Placement of portal "+portal+" was cancelled.");
@@ -264,6 +265,13 @@ public class Player extends Thing {
 		if(in.ir(GLFW_KEY_L)) {
 			SaveState testIn=SaveState.input();
 			Main.scheduledReplacement=testIn;
+		}
+		//DEBUG
+		if(in.ir(GLFW_KEY_P)) {
+			Main.portalWorld.getWorld2().remove(this.geo.p.body);
+			Main.portalWorld.getWorld1().add(PhysicsWorld.getEntryFromRigidBody(this.geo.p.body));
+			portalPair.placed1=false;
+			portalPair.placed2=false;
 		}
 		this.geo.p.body.getMotionState().getWorldTransform(new Transform()).getMatrix(mat);
 		mat.getRotationScale(mat1);

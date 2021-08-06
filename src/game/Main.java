@@ -38,6 +38,8 @@ import javax.vecmath.Vector3f;
 import org.lwjgl.system.MemoryStack;
 
 import com.bulletphysics.linearmath.Transform;
+import com.bulletphysics.collision.dispatch.CollisionDispatcher;
+import com.bulletphysics.collision.dispatch.NearCallback;
 
 import console.JythonConsoleManager;
 import graphics.Camera;
@@ -45,6 +47,8 @@ import graphics.RenderFeeder;
 import lepton.cpshlib.ComputeShader;
 import lepton.engine.audio.Audio;
 import lepton.engine.physics.PhysicsWorld;
+import lepton.engine.physics.RigidBodyEntry;
+import lepton.engine.physics.UserPointerStructure;
 import lepton.engine.rendering.FrameBuffer;
 import lepton.engine.rendering.GLContextInitializer;
 import lepton.engine.rendering.Screen;
@@ -66,8 +70,11 @@ import objects.Player;
 import objects.PortalPair;
 import objects.Thing;
 import objects.Wall;
+import physics.LinkedPhysicsWorld;
 import physics.MainPhysicsStepModifier;
 import physics.Movement;
+import physics.PortalNearCallback;
+import physics.Main2PhysicsStepModifier;
 
 public class Main {
 	public static final float volume=1.0f;
@@ -142,27 +149,34 @@ public class Main {
 	}
 	public static MemoryStack stack;
 	public static PhysicsWorld physics;
-	public static PhysicsWorld portalPhysics;
+	public static LinkedPhysicsWorld portalWorld;
+	public static int pPortalBodies=0;
 	public static void MainLoop() {
 		stack=stackPush();
 		Logger.setCleanupTask(()->CleanupTasks.cleanUp());
 		CleanupTasks.add(()->Logger.log(0,"Cleaning up..."));
 		CleanupTasks.add(()->GLContextInitializer.doCursor(win,false,false));
 		CleanupTasks.add(()->GLContextInitializer.destroyGLContext());
-		CleanupTasks.add(()->Main.jythonConsoleHandler.stopJython());
 		CleanupTasks.add(()->stack.close());
 		CleanupTasks.add(()->Audio.cleanUp());
 		
 		physics=new PhysicsWorld();
-		portalPhysics=new PhysicsWorld();
+		portalWorld=new LinkedPhysicsWorld();
+		portalWorld.setWorld1(physics);
+		Main2PhysicsStepModifier portalPhysicsStepModifier=new Main2PhysicsStepModifier(null);
+//		PhysicsWorld portalWorld2=new PhysicsWorld();
+//		portalWorld.setWorld2(portalWorld2);
+		portalWorld.createAndLinkWorld2(portalPhysicsStepModifier);
+		portalPhysicsStepModifier.setPhysicsWorld(portalWorld.getWorld2());
 		
 		Thing.defaultPhysicsWorld=physics;
-		
+				
 		ConsoleWindow mainConsoleWindow=new ConsoleWindow(false,800,600,"Space: A Portal Story - Debug console",(s)->Main.jythonConsoleHandler.recv(s),"Debug console ready.\nStarting the game shortly...");
 		mainConsoleWindow.setVisible(true);
 		consoleWindowHandler=new ConsoleWindowHandler(mainConsoleWindow);
 		Logger.handlers.add(consoleWindowHandler);
 		CleanupTasks.add(()->{if(LogLevel.isFatal()) {mainConsoleWindow.waitForClose();}});
+		CleanupTasks.add(()->Main.jythonConsoleHandler.stopJython());
 		CleanupTasks.add(()->mainConsoleWindow.close());
 		CleanupTasks.add(()->Logger.handlers.remove(consoleWindowHandler));
 		CleanupTasks.add(()->System.exit(0));
@@ -170,8 +184,9 @@ public class Main {
 		jythonConsoleHandler=new JythonConsoleManager(mainConsoleWindow);
 		jythonConsoleHandler.initJython();
 		
+		((CollisionDispatcher)portalWorld.getWorld2().dynamicsWorld.getDispatcher()).setNearCallback(new PortalNearCallback());
 		
-		GLContextInitializer.initializeGLContext(true,864,486,false,"Portal thing"); //-----------------------------------We need to change this!-----------------------------------//
+		GLContextInitializer.initializeGLContext(true,864,486,false,"Space - A Portal Story");
 		LeptonUtil.locationReference=Main.class;
 		activeWindow=win;
 		
@@ -226,7 +241,7 @@ public class Main {
 		float amb=0.02f;
 
 		Chamber test=new Chamber();
-		Thing hld=null;
+//		Thing hld=null;
 
 
 		//PUT CHAMBER CONTENTS HERE:
@@ -311,7 +326,33 @@ public class Main {
 			if(in.i(GLFW_KEY_ESCAPE)) {
 				Main.requestClose();
 			}
-			physics.step();
+			int portalWorldSize=portalWorld.getWorld2().getBodies().size();
+			if(portalWorldSize>0) {
+				for(RigidBodyEntry rbe : portalWorld.getWorld1().getBodies()) {
+					RigidBodyEntry lrbe=((RigidBodyEntry)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("linked_rbe"));
+					if(portalWorld.getWorld2().getBodies().contains(lrbe)) {
+						portalWorldSize--;
+					}
+				}
+			}
+			if(portalWorldSize==0 && pPortalBodies>0) {
+				Logger.log(0,"Deconstructing portal physics world");
+				portalWorld.clearWorld2();
+				if(portalWorld.getWorld2().getBodies().size()>0) {
+					Logger.log(4,"Extra weird bodies in virtual portal physics world");
+				}
+			}
+			if(portalWorldSize>0 && pPortalBodies==0) {
+				Logger.log(0,"Rebuilding portal physics world");
+				portalWorld.rebuildWorld2();
+			}
+			pPortalBodies=portalWorldSize;
+			if(portalWorldSize==0) {
+				physics.step();
+			} else {
+				portalWorld.step_linked();
+			}
+			
 			Movement.movement();
 			Thing.runRayTest(physics);
 

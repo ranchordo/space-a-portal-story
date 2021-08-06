@@ -7,6 +7,7 @@ import java.util.List;
 import javax.vecmath.AxisAngle4f;
 import javax.vecmath.Matrix3f;
 import javax.vecmath.Matrix4f;
+import javax.vecmath.Point3f;
 import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3f;
 
@@ -21,7 +22,9 @@ import lepton.optim.objpoollib.DefaultVecmathPools;
 import lepton.optim.objpoollib.PoolElement;
 import lepton.util.LeptonUtil;
 import lepton.util.advancedLogger.Logger;
+import util.AdditionalVecmathPools;
 import util.SaveStateComponent;
+import util.Util;
 
 public class PortalPair extends Thing {
 	//Stencil space partitioning:
@@ -33,7 +36,7 @@ public class PortalPair extends Thing {
 	 */
 	//Based on this partition schema, 63 stencil iterations is the maximum allowed.
 	private static final long serialVersionUID = 2380326466588862899L;
-	public static final int STENCIL_ITERATIONS=5;
+	public static final int STENCIL_ITERATIONS=2;
 	public static final float FUNNELING_SCALE=3.0f;
 	public static final float FUNNELING_DIST=20.0f;
 	public static final float FUNNELING_VEL_THSHLD=2.0f;
@@ -320,15 +323,51 @@ public class PortalPair extends Thing {
 	public int rayTest(Vector3f a, Vector3f b) {
 		return rayTest_sc(a,b,1);
 	}
+	public boolean rayTest(Transform p, Vector3f a, float sc, float maxDist) {
+		PoolElement<Matrix4f> m=DefaultVecmathPools.matrix4f.alloc();
+		p.getMatrix(m.o());
+		m.o().invert(); //m is world-to-object
+		PoolElement<Point3f> pe1=AdditionalVecmathPools.point3f.alloc();
+		pe1.o().set(a);
+		m.o().transform(pe1.o());
+		float x=pe1.o().x;
+		float y=pe1.o().y;
+		x/=getShape().x;
+		y/=getShape().y;
+		m.free();
+		pe1.free();
+		float r=(float)Math.sqrt(Math.pow(x,2)+Math.pow(y,2));
+		return r<=sc && (maxDist<0)?true:(Math.abs(pe1.o().z)<=maxDist);
+	}
+	public boolean rayTest(Transform p, Vector3f a, Vector3f b, float sc) {
+		PoolElement<Matrix4f> m=DefaultVecmathPools.matrix4f.alloc();
+		p.getMatrix(m.o());
+		m.o().invert(); //m is world-to-object
+		PoolElement<Point3f> pe1=AdditionalVecmathPools.point3f.alloc();
+		PoolElement<Point3f> pe2=AdditionalVecmathPools.point3f.alloc();
+		pe1.o().set(a);
+		pe2.o().set(b);
+		m.o().transform(pe1.o());
+		m.o().transform(pe2.o());
+		if(Util.sign(pe1.o().z)==Util.sign(pe2.o().z)) {
+			m.free();
+			pe1.free();
+			pe2.free();
+			return false;
+		}
+		float dz=pe1.o().z-pe2.o().z;
+		float x=(-((pe1.o().x-pe2.o().x)/dz)*pe1.o().z)+pe1.o().x;
+		float y=(-((pe1.o().y-pe2.o().y)/dz)*pe1.o().z)+pe1.o().y;
+		x/=getShape().x;
+		y/=getShape().y;
+		m.free();
+		pe1.free();
+		pe2.free();
+		float r=(float)Math.sqrt(Math.pow(x,2)+Math.pow(y,2));
+		return r<=sc;
+	}
 	public int rayTest_sc(Vector3f a, Vector3f b, float sc) {
-		Transform np1=new Transform(new Matrix4f(p1.getRotation(new Quat4f()),p1.origin,sc));
-		Transform np2=new Transform(new Matrix4f(p2.getRotation(new Quat4f()),p2.origin,sc));
-		boolean po1=geo.g.rayTest(a,b,np1);
-		boolean po2=geo2.g.rayTest(a,b,np2);
-		if(po1 && !po2) {return 1;}
-		if(po2 && !po1) {return 2;}
-		if(po1 && po2) {return 3;}
-		return 0;
+		return (rayTest(p1,a,b,sc)?1:0) + (rayTest(p2,a,b,sc)?2:0);
 	}
 	public int funnelingRayTest(Vector3f a, Vector3f b) {
 		return rayTest_sc(a,b,FUNNELING_SCALE);

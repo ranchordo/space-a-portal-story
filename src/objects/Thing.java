@@ -89,6 +89,9 @@ public abstract class Thing implements Serializable {
 	public boolean portalsIgnore=false;
 	public boolean portalingCollisionsEnabled=true;
 	
+	public int currentPortalStatus=0;
+	public int previousPortalStatus=0;
+	
 	public boolean npflag=false;
 	public boolean npflag2=false;
 	

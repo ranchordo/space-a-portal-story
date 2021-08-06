@@ -22,4 +22,7 @@ public class Util {
 		}
 		return result;
 	}
+	public static int sign(float i) {
+		return (i>0)?1:((i<0)?-1:0);
+	}
 }
