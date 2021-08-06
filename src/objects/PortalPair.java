@@ -259,6 +259,11 @@ public class PortalPair extends Thing {
 		p2=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,19,-9.85f),1.0f));
 		updateDifferences();
 	}
+	public void onPlacement(int portal) {
+		if(Main.portalWorld.getWorld2().getBodies().size()>0) {
+			Main.portalWorld.rebuildWorld2WithDuplicateStructures();
+		}
+	}
 	private transient Matrix3f mat3=new Matrix3f();
 	private transient Matrix4f i=new Matrix4f();
 	private transient Matrix4f t=new Matrix4f();

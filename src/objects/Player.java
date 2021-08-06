@@ -223,7 +223,7 @@ public class Player extends Thing {
 				}
 				portalPair.attached2=cdt_thing;
 			}
-			
+			portalPair.onPlacement(portal);
 		} else if(cdt_thing!=null) {
 			if(!cdt_thing.portalable) {
 				Logger.log(0,"Portal firing cancelled due to a stopsPortals-enabled surface. ("+portal+")");

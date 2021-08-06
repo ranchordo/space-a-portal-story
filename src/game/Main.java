@@ -166,7 +166,7 @@ public class Main {
 		Main2PhysicsStepModifier portalPhysicsStepModifier=new Main2PhysicsStepModifier(null);
 //		PhysicsWorld portalWorld2=new PhysicsWorld();
 //		portalWorld.setWorld2(portalWorld2);
-		portalWorld.createAndLinkWorld2(portalPhysicsStepModifier);
+		portalWorld.createWorld2(portalPhysicsStepModifier);
 		portalPhysicsStepModifier.setPhysicsWorld(portalWorld.getWorld2());
 		
 		Thing.defaultPhysicsWorld=physics;
@@ -331,6 +331,10 @@ public class Main {
 				for(RigidBodyEntry rbe : portalWorld.getWorld1().getBodies()) {
 					RigidBodyEntry lrbe=((RigidBodyEntry)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("linked_rbe"));
 					if(portalWorld.getWorld2().getBodies().contains(lrbe)) {
+						RigidBodyEntry alrbe=((RigidBodyEntry)((UserPointerStructure)lrbe.b.getUserPointer()).getUserPointers().get("additional_linked_rbe"));
+						if(alrbe!=null) {
+							portalWorldSize--;
+						}
 						portalWorldSize--;
 					}
 				}
@@ -344,7 +348,7 @@ public class Main {
 			}
 			if(portalWorldSize>0 && pPortalBodies==0) {
 				Logger.log(0,"Rebuilding portal physics world");
-				portalWorld.rebuildWorld2();
+				portalWorld.rebuildWorld2WithDuplicateStructures();
 			}
 			pPortalBodies=portalWorldSize;
 			if(portalWorldSize==0) {
