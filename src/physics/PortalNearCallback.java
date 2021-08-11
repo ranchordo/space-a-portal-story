@@ -11,8 +11,10 @@ import com.bulletphysics.collision.dispatch.ManifoldResult;
 import com.bulletphysics.collision.dispatch.NearCallback;
 import com.bulletphysics.collision.narrowphase.ManifoldPoint;
 import com.bulletphysics.collision.narrowphase.PersistentManifold;
+import com.bulletphysics.dynamics.RigidBody;
 
 import game.PlayerInitializer;
+import lepton.engine.physics.UserPointerStructure;
 import objects.PortalPair;
 import util.Util;
 
@@ -20,7 +22,38 @@ public class PortalNearCallback extends NearCallback {
 	private final ManifoldResult contactPointResult = new ManifoldResult();
 	private final Vector3f a=new Vector3f();
 	private final Vector3f b=new Vector3f();
-
+	
+	private static final float EPSILON=PortalPair.WALL_DISTANCE*2f;
+	public static boolean removeContactPoint(Vector3f a, Vector3f b, RigidBody b1, RigidBody b2) {
+		PortalPair pp=PlayerInitializer.player.portalPair;
+		float r1=Util.distance(pp.p1.origin,a);
+		float r2=Util.distance(pp.p2.origin,a);
+		if(r1>pp.getShape().length()+2.0f && r2>pp.getShape().length()+2.0f) {
+			return false;
+		}
+		int rayTest=(pp.rayTest(pp.p1,a,1,-1)?1:0)+(pp.rayTest(pp.p2,a,1,-1)?2:0);
+		if(rayTest!=0) {
+			return true;
+		}
+		Boolean otherWorld1=(Boolean)((UserPointerStructure)b1.getUserPointer()).getUserPointers().get("other_world");
+		Boolean otherWorld2=(Boolean)((UserPointerStructure)b2.getUserPointer()).getUserPointers().get("other_world");
+		
+		if(!(otherWorld1==null ^ otherWorld2==null)) {
+			return false;
+		}
+		boolean otherWorld=otherWorld1==null?otherWorld2:otherWorld1;
+		a.sub(pp.p1.origin);
+		b.sub(pp.p1.origin);
+		float dotA=pp.normal1.dot(a);
+		float dotB=pp.normal1.dot(b);
+		if((dotA>EPSILON || dotB>EPSILON) && otherWorld) {
+			return true;
+		}
+		if((dotA<-EPSILON || dotB<-EPSILON) && !otherWorld) {
+			return true;
+		}
+		return false;
+	}
 	/**
 	 * Portalified DefaultNearCallback
 	 */
@@ -44,14 +77,7 @@ public class PortalNearCallback extends NearCallback {
 							ManifoldPoint point=m.getContactPoint(i);
 							point.getPositionWorldOnA(a);
 							point.getPositionWorldOnB(b);
-							PortalPair pp=PlayerInitializer.player.portalPair;
-							float r1=Util.distance(pp.p1.origin,a);
-							float r2=Util.distance(pp.p2.origin,a);
-							if(r1>pp.getShape().length() && r2>pp.getShape().length()) {
-								continue;
-							}
-							int rayTest=(pp.rayTest(pp.p1,a,1,-1)?1:0)+(pp.rayTest(pp.p2,a,1,-1)?2:0);
-							if(rayTest!=0) {
+							if(removeContactPoint(a,b,(RigidBody)m.getBody0(),(RigidBody)m.getBody1())) {
 								m.removeContactPoint(i);
 							}
 						}

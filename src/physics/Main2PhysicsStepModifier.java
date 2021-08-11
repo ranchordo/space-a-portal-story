@@ -80,10 +80,15 @@ public class Main2PhysicsStepModifier extends GenericPhysicsStepModifier {
 			for(RigidBodyEntry rbe : totransfer) {
 				if(physics.getBodies().contains(rbe)) {
 					Thing thing=((Thing)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("thing"));
+//					System.out.println("HEY");
 					if(thing!=null) {
 						thing.setPhysicsWorld(portalWorld.getWorld1());
 					} else {
 						physics.remove(rbe.b);
+						RigidBodyEntry alrbe=((RigidBodyEntry)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("additional_linked_rbe"));
+						if(physics.getBodies().contains(alrbe)) {
+							physics.remove(alrbe.b);
+						}
 						portalWorld.getWorld1().add(rbe);
 					}
 				}

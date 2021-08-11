@@ -55,6 +55,11 @@ public class MainPhysicsStepModifier extends GenericPhysicsStepModifier {
 				}
 				
 				int p=(r1>r2)?2:1;
+				if(p!=0) {
+					pos.sub(p==1?pp.p1.origin:pp.p2.origin);
+					float dot=(p==1?pp.normal1:pp.normal2).dot(pos);
+					p=dot>=0?p:0;
+				}
 				((Thing)((UserPointerStructure)be.b.getUserPointer()).getUserPointers().get("thing")).currentPortalStatus=p;
 				if(p!=0) {
 					totransfer=new ArrayList<RigidBodyEntry>();

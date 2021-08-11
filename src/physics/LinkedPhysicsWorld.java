@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map.Entry;
 
+import javax.vecmath.AxisAngle4f;
 import javax.vecmath.Matrix4f;
 import javax.vecmath.Vector3f;
 
@@ -18,6 +19,9 @@ import game.PlayerInitializer;
 import lepton.engine.physics.PhysicsWorld;
 import lepton.engine.physics.RigidBodyEntry;
 import lepton.engine.physics.UserPointerStructure;
+import lepton.optim.objpoollib.DefaultVecmathPools;
+import lepton.optim.objpoollib.PoolElement;
+import lepton.util.LeptonUtil;
 import util.Util;
 
 public class LinkedPhysicsWorld {
@@ -96,7 +100,7 @@ public class LinkedPhysicsWorld {
 	}
 	public void rebuildWorld2WithDuplicateStructures() {
 		rebuildWorld2WithoutDuplicateStructures();
-		buildDuplicateStructures(PlayerInitializer.player.portalPair.difference());
+		buildDuplicateStructures(PlayerInitializer.player.portalPair.difference_inv());
 	}
 	protected void buildDuplicateStructures(Transform difference) {
 		ArrayList<RigidBodyEntry> toAdd=new ArrayList<RigidBodyEntry>();
@@ -105,8 +109,8 @@ public class LinkedPhysicsWorld {
 			if(!world1.getBodies().contains(lrbe)) {
 				continue;
 			}
-			Transform tr=rbe.b.getMotionState().getWorldTransform(new Transform());
-			tr.mul(difference);
+//			Transform tr=rbe.b.getMotionState().getWorldTransform(new Transform());
+//			tr.mul(tr,difference);
 			RigidBody newb=new RigidBody(getConstructionInfo(rbe.b));
 			RigidBodyEntry additional_linked_rbe=new RigidBodyEntry(newb,rbe.group,rbe.mask);
 			for(Entry<String,Object> userPointer : ((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().entrySet()) {
@@ -114,6 +118,8 @@ public class LinkedPhysicsWorld {
 			}
 			((UserPointerStructure)rbe.b.getUserPointer()).addUserPointer("additional_linked_rbe",additional_linked_rbe);
 			((UserPointerStructure)additional_linked_rbe.b.getUserPointer()).addUserPointer("additional_linked_rbe",rbe);
+			((UserPointerStructure)rbe.b.getUserPointer()).addUserPointer("other_world",(Boolean)false);
+			((UserPointerStructure)additional_linked_rbe.b.getUserPointer()).addUserPointer("other_world",(Boolean)true);
 			toAdd.add(additional_linked_rbe);
 		}
 		for(RigidBodyEntry rbe : toAdd) {
@@ -121,10 +127,14 @@ public class LinkedPhysicsWorld {
 		}
 	}
 	private Transform tr=new Transform();
+	private Transform flip=null;
 	private Vector3f a=new Vector3f();
 	private Vector3f b=new Vector3f();
 	private Matrix4f c=new Matrix4f();
 	public void step_linked() {
+		if(flip==null) {
+			flip=new Transform(new Matrix4f(LeptonUtil.AxisAngle_np(new AxisAngle4f(0,0,1,(float)Math.toRadians(180))),new Vector3f(0,0,0),1.0f));
+		}
 		world1.step();
 		world2.step();
 		for(RigidBodyEntry rbe : world1.getBodies()) {
@@ -145,7 +155,8 @@ public class LinkedPhysicsWorld {
 			if(lrbe!=null) {
 				RigidBodyEntry alrbe=((RigidBodyEntry)((UserPointerStructure)lrbe.b.getUserPointer()).getUserPointers().get("additional_linked_rbe"));
 				PlayerInitializer.player.portalPair.difference().getMatrix(c).transform(a);
-				tr.mul(PlayerInitializer.player.portalPair.difference());
+				
+				tr.mul(PlayerInitializer.player.portalPair.difference(),tr);
 				alrbe.b.setWorldTransform(tr);
 				alrbe.b.setLinearVelocity(a);
 			}

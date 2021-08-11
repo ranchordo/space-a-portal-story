@@ -3,35 +3,15 @@ package game;
 import static lepton.engine.rendering.GLContextInitializer.doCursor;
 import static lepton.engine.rendering.GLContextInitializer.fr;
 import static lepton.engine.rendering.GLContextInitializer.win;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
-import static org.lwjgl.glfw.GLFW.glfwPollEvents;
-import static org.lwjgl.glfw.GLFW.glfwSetWindowShouldClose;
-import static org.lwjgl.glfw.GLFW.glfwSwapBuffers;
-import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
-import static org.lwjgl.opengl.GL11.GL_ALWAYS;
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
-import static org.lwjgl.opengl.GL11.GL_KEEP;
-import static org.lwjgl.opengl.GL11.GL_RGBA8;
-import static org.lwjgl.opengl.GL11.GL_STENCIL_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
-import static org.lwjgl.opengl.GL11.glClear;
-import static org.lwjgl.opengl.GL11.glClearColor;
-import static org.lwjgl.opengl.GL11.glDisable;
-import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glGetIntegerv;
-import static org.lwjgl.opengl.GL11.glPushMatrix;
-import static org.lwjgl.opengl.GL11.glStencilFunc;
-import static org.lwjgl.opengl.GL11.glStencilMask;
-import static org.lwjgl.opengl.GL11.glStencilOp;
-import static org.lwjgl.opengl.GL30.GL_RGBA16F;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
 
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 
 import javax.vecmath.AxisAngle4f;
+import javax.vecmath.Matrix4f;
 import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 
@@ -41,7 +21,9 @@ import com.bulletphysics.linearmath.Transform;
 import com.bulletphysics.collision.dispatch.CollisionDispatcher;
 import com.bulletphysics.collision.dispatch.NearCallback;
 
+import console.Commands;
 import console.JythonConsoleManager;
+import debug.GenericCubeFactory;
 import graphics.Camera;
 import graphics.RenderFeeder;
 import lepton.cpshlib.ComputeShader;
@@ -51,11 +33,14 @@ import lepton.engine.physics.RigidBodyEntry;
 import lepton.engine.physics.UserPointerStructure;
 import lepton.engine.rendering.FrameBuffer;
 import lepton.engine.rendering.GLContextInitializer;
+import lepton.engine.rendering.GObject;
 import lepton.engine.rendering.Screen;
 import lepton.engine.rendering.Shader;
 import lepton.engine.rendering.TextureCache;
 import lepton.engine.rendering.lighting.BloomHandler;
 import lepton.engine.rendering.lighting.Light;
+import lepton.optim.objpoollib.DefaultVecmathPools;
+import lepton.optim.objpoollib.PoolElement;
 import lepton.optim.objpoollib.PoolStrainer;
 import lepton.util.CleanupTasks;
 import lepton.util.InputHandler;
@@ -74,6 +59,7 @@ import physics.LinkedPhysicsWorld;
 import physics.MainPhysicsStepModifier;
 import physics.Movement;
 import physics.PortalNearCallback;
+import util.Util;
 import physics.Main2PhysicsStepModifier;
 
 public class Main {
@@ -116,7 +102,7 @@ public class Main {
 	public static InputHandler in;
 	
 	public static JythonConsoleManager jythonConsoleHandler;
-	private static LogHandler consoleWindowHandler;
+	public static LogHandler consoleWindowHandler;
 	public static void renderRoutine(Thing thing, int portal) {
 		activePortalTransform=portal;
 		thing.render();
@@ -129,28 +115,12 @@ public class Main {
 		activePortalTransform=portal;
 		thing.render(param);
 	}
-	public static void requestClose() {
-		glfwSetWindowShouldClose(win,true);
-	}
-	public static void forceTerminate() {
-		CleanupTasks.cleanUp();
-	}
-	public static void unhookConsoleHandler() {
-		Logger.log(0,"Unhooking logger console handler...");
-		if(Logger.handlers.getInternalArrayList().contains(consoleWindowHandler)) {
-			Logger.handlers.remove(consoleWindowHandler);
-		}
-	}
-	public static void hookConsoleHandler() {
-		if(!Logger.handlers.getInternalArrayList().contains(consoleWindowHandler)) {
-			Logger.handlers.add(consoleWindowHandler);
-		}
-		Logger.log(0,"Logger console handler re-hooked");
-	}
 	public static MemoryStack stack;
 	public static PhysicsWorld physics;
 	public static LinkedPhysicsWorld portalWorld;
 	public static int pPortalBodies=0;
+	public static PhysicsWorld dbgRenderWorld=null;
+	private static GObject genericCube=null;
 	public static void MainLoop() {
 		stack=stackPush();
 		Logger.setCleanupTask(()->CleanupTasks.cleanUp());
@@ -324,7 +294,7 @@ public class Main {
 
 			glfwPollEvents();
 			if(in.i(GLFW_KEY_ESCAPE)) {
-				Main.requestClose();
+				Commands.requestClose();
 			}
 			int portalWorldSize=portalWorld.getWorld2().getBodies().size();
 			if(portalWorldSize>0) {
@@ -416,7 +386,42 @@ public class Main {
 			glStencilFunc(GL_ALWAYS,128,0xFF);
 			//renderRoutine(pp,0);
 			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-
+			
+			if(dbgRenderWorld!=null) {
+				if(genericCube==null) {
+					genericCube=GenericCubeFactory.createGenericCube();
+					genericCube.wireframe=true;
+				}
+				glDisable(GL_DEPTH_TEST);
+				for(RigidBodyEntry rbe : dbgRenderWorld.getBodies()) {
+					Thing thing=(Thing)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("thing");
+					if(thing!=null) {
+						PoolElement<Matrix4f> p=DefaultVecmathPools.matrix4f.alloc();
+						PoolElement<Matrix4f> p1=DefaultVecmathPools.matrix4f.alloc();
+						PoolElement<Transform> tr=DefaultVecmathPools.transform.alloc();
+						Util.clear(p.o());
+						p.o().m00=thing.getShape().x;
+						p.o().m11=thing.getShape().y;
+						p.o().m22=thing.getShape().z;
+						p.o().m33=1;
+						rbe.b.getWorldTransform(tr.o()).getMatrix(p1.o());
+						p.o().mul(p1.o(),p.o());
+						tr.o().set(p.o());
+						Boolean otherWorld=(Boolean)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("other_world");
+						if(otherWorld!=null) {
+							genericCube.setColor(1,otherWorld?1:0,otherWorld?0:1);
+						} else {
+							genericCube.setColor(0,1,1);
+						}
+						genericCube.copyData(GObject.COLOR_DATA, GL_DYNAMIC_DRAW);
+						genericCube.highRender_customTransform(tr.o());
+						p.free();
+						p1.free();
+						tr.free();
+					}
+				}
+				glEnable(GL_DEPTH_TEST);
+			}
 
 			fbo.blitTo(interfbo,0,0);
 			//fbo.blitTo(ssaoMulFBO,3,0);

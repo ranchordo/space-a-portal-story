@@ -44,12 +44,12 @@ public class PortalPair extends Thing {
 	public static final float FUNNELING_TARG_VEL_MAG=1.0f;
 	public static final float FUNNELING_ANGLE_THSHLD=(float)Math.toRadians(20);
 	public static final boolean FUNNELING_ENABLE=true;
-	public static final float CLIP_SCALE=1.5f;
-	public static final float CLIP_DISTANCE=0.0f;
+//	public static final float CLIP_SCALE=1.5f;
+//	public static final float CLIP_DISTANCE=0.0f;
 	public static final float WALL_DISTANCE=0.05f;
-	public static final float VEL_CLIP_MULTIPLIER=4.0f;
-	public static final float VEL_MAG_STOP=2.0f;
-	public static final float ALT_CLIP=2f;
+//	public static final float VEL_CLIP_MULTIPLIER=4.0f;
+//	public static final float VEL_MAG_STOP=2.0f;
+//	public static final float ALT_CLIP=2f;
 	public static final float OPENING_ANIM_LEN_MICROS=500000.0f;
 	public static final float PORTAL_WIDTH=1.0f;
 	public static final float PORTAL_HEIGHT=1.8f;
@@ -260,9 +260,9 @@ public class PortalPair extends Thing {
 		updateDifferences();
 	}
 	public void onPlacement(int portal) {
-		if(Main.portalWorld.getWorld2().getBodies().size()>0) {
-			Main.portalWorld.rebuildWorld2WithDuplicateStructures();
-		}
+//		if(Main.portalWorld.getWorld2().getBodies().size()>0) {
+//			Main.portalWorld.rebuildWorld2WithDuplicateStructures();
+//		}
 	}
 	private transient Matrix3f mat3=new Matrix3f();
 	private transient Matrix4f i=new Matrix4f();

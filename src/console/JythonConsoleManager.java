@@ -85,6 +85,8 @@ public class JythonConsoleManager {
 		osp.start();
 		jython.exec("import sys");
 		jython.exec("sys.path.append(\""+LeptonUtil.getJarPath()+"\")");
+		jython.exec("from game import Main");
+		jython.exec("from console.Commands import *");
 	}
 	public void stopJython() {
 		pollOutputStream=false;
