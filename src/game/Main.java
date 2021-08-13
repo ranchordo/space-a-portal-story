@@ -23,6 +23,7 @@ import com.bulletphysics.collision.dispatch.NearCallback;
 
 import console.Commands;
 import console.JythonConsoleManager;
+import debug.ContactPoint;
 import debug.GenericCubeFactory;
 import graphics.Camera;
 import graphics.RenderFeeder;
@@ -320,6 +321,13 @@ public class Main {
 				Logger.log(0,"Rebuilding portal physics world");
 				portalWorld.rebuildWorld2WithDuplicateStructures();
 			}
+			if(dbgRenderWorld!=null) {
+				if(((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback() instanceof PortalNearCallback) {
+					if(((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints!=null) {
+						Util.clearsafe(((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints);
+					}
+				}
+			}
 			pPortalBodies=portalWorldSize;
 			if(portalWorldSize==0) {
 				physics.step();
@@ -388,6 +396,30 @@ public class Main {
 			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
 			
 			if(dbgRenderWorld!=null) {
+				if(((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback() instanceof PortalNearCallback) {
+					if(((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints==null) {
+						((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints=new ArrayList<PoolElement<ContactPoint>>();
+					} else {
+						for(PoolElement<ContactPoint> cp : ((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints) {
+							PoolElement<Matrix4f> p=DefaultVecmathPools.matrix4f.alloc();
+							PoolElement<Transform> tr=DefaultVecmathPools.transform.alloc();
+							Util.clear(p.o());
+							p.o().m00=0.1f;
+							p.o().m11=0.1f;
+							p.o().m22=0.1f;
+							p.o().m33=0.1f;
+							p.o().m03=cp.o().posA.x;
+							p.o().m13=cp.o().posA.y;
+							p.o().m23=cp.o().posA.z;
+							tr.o().set(p.o());
+							genericCube.setColor(cp.o().removed?1:0,cp.o().removed?0:1,0);
+							genericCube.copyData(GObject.COLOR_DATA, GL_DYNAMIC_DRAW);
+							genericCube.highRender_customTransform(tr.o());
+							p.free();
+							tr.free();
+						}
+					}
+				}
 				if(genericCube==null) {
 					genericCube=GenericCubeFactory.createGenericCube();
 					genericCube.wireframe=true;
@@ -415,6 +447,7 @@ public class Main {
 						}
 						genericCube.copyData(GObject.COLOR_DATA, GL_DYNAMIC_DRAW);
 						genericCube.highRender_customTransform(tr.o());
+						
 						p.free();
 						p1.free();
 						tr.free();

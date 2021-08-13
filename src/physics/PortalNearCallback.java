@@ -1,5 +1,7 @@
 package physics;
 
+import java.util.ArrayList;
+
 import javax.vecmath.Vector3f;
 
 import com.bulletphysics.collision.broadphase.BroadphasePair;
@@ -13,12 +15,15 @@ import com.bulletphysics.collision.narrowphase.ManifoldPoint;
 import com.bulletphysics.collision.narrowphase.PersistentManifold;
 import com.bulletphysics.dynamics.RigidBody;
 
+import debug.ContactPoint;
 import game.PlayerInitializer;
 import lepton.engine.physics.UserPointerStructure;
+import lepton.optim.objpoollib.PoolElement;
 import objects.PortalPair;
 import util.Util;
 
 public class PortalNearCallback extends NearCallback {
+	public ArrayList<PoolElement<ContactPoint>> contactPoints;
 	private final ManifoldResult contactPointResult = new ManifoldResult();
 	private final Vector3f a=new Vector3f();
 	private final Vector3f b=new Vector3f();
@@ -77,8 +82,15 @@ public class PortalNearCallback extends NearCallback {
 							ManifoldPoint point=m.getContactPoint(i);
 							point.getPositionWorldOnA(a);
 							point.getPositionWorldOnB(b);
+							boolean r=false;
 							if(removeContactPoint(a,b,(RigidBody)m.getBody0(),(RigidBody)m.getBody1())) {
+								r=true;
 								m.removeContactPoint(i);
+							}
+							if(contactPoints!=null) {
+								PoolElement<ContactPoint> p=ContactPoint.contactPointPool.alloc();
+								p.o().set(a,b,r);
+								contactPoints.add(p);
 							}
 						}
 					}
