@@ -11,27 +11,25 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 
 import javax.vecmath.AxisAngle4f;
-import javax.vecmath.Matrix4f;
 import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 
 import org.lwjgl.system.MemoryStack;
 
-import com.bulletphysics.linearmath.Transform;
 import com.bulletphysics.collision.dispatch.CollisionDispatcher;
-import com.bulletphysics.collision.dispatch.NearCallback;
+import com.bulletphysics.linearmath.Transform;
 
 import console.Commands;
 import console.JythonConsoleManager;
-import debug.ContactPoint;
-import debug.GenericCubeFactory;
+import debug.TimeProfiler;
 import graphics.Camera;
 import graphics.RenderFeeder;
+import graphics2d.presets.DebugScreen;
+import graphics2d.things.Thing2d;
+import graphics2d.util.Fonts;
 import lepton.cpshlib.ComputeShader;
 import lepton.engine.audio.Audio;
 import lepton.engine.physics.PhysicsWorld;
-import lepton.engine.physics.RigidBodyEntry;
-import lepton.engine.physics.UserPointerStructure;
 import lepton.engine.rendering.FrameBuffer;
 import lepton.engine.rendering.GLContextInitializer;
 import lepton.engine.rendering.GObject;
@@ -40,8 +38,6 @@ import lepton.engine.rendering.Shader;
 import lepton.engine.rendering.TextureCache;
 import lepton.engine.rendering.lighting.BloomHandler;
 import lepton.engine.rendering.lighting.Light;
-import lepton.optim.objpoollib.DefaultVecmathPools;
-import lepton.optim.objpoollib.PoolElement;
 import lepton.optim.objpoollib.PoolStrainer;
 import lepton.util.CleanupTasks;
 import lepton.util.InputHandler;
@@ -57,11 +53,10 @@ import objects.PortalPair;
 import objects.Thing;
 import objects.Wall;
 import physics.LinkedPhysicsWorld;
+import physics.Main2PhysicsStepModifier;
 import physics.MainPhysicsStepModifier;
 import physics.Movement;
 import physics.PortalNearCallback;
-import util.Util;
-import physics.Main2PhysicsStepModifier;
 
 public class Main {
 	public static final float volume=1.0f;
@@ -74,6 +69,7 @@ public class Main {
 //	public static final int GRAPHICAL_SHADER=0x88;
 	public static long activeWindow;
 	public static ArrayList<Thing> things=new ArrayList<Thing>();
+	public static ArrayList<Thing2d> displays=new ArrayList<Thing2d>();
 	public static ArrayList<Thing> addSched=new ArrayList<Thing>();
 	public static ArrayList<Thing> remSched=new ArrayList<Thing>();
 //	public static boolean vr=false;
@@ -94,7 +90,7 @@ public class Main {
 
 	public static float exposure=1.0f;
 	public static float gamma=2.2f;
-	public static float bloom_thshld=0.8f;
+	public static float bloom_thshld=0.0f;
 
 	public static int activePortalTransform=0;
 //	public static long[] ts;
@@ -119,14 +115,25 @@ public class Main {
 	public static MemoryStack stack;
 	public static PhysicsWorld physics;
 	public static LinkedPhysicsWorld portalWorld;
-	public static int pPortalBodies=0;
 	public static PhysicsWorld dbgRenderWorld=null;
-	private static GObject genericCube=null;
+	public static TimeProfiler timeProfiler=new TimeProfiler("Physics","Thing logic","Portal graphics","Main render","Debug","Misc","Post-render","SwapBuffers","2D render");
+	public static Fonts fonts=new Fonts();
 	public static void MainLoop() {
 		stack=stackPush();
 		Logger.setCleanupTask(()->CleanupTasks.cleanUp());
+		CleanupTasks.add(()->{
+			if(LogLevel.isFatal()) {
+				//aHR0cHM6Ly9pMS50aGVwb3J0YWx3aWtpLm5ldC9pbWcvYy9jOS9HTGFET1Nfc3BfYTJfYnRzMV9pbnRybzAxLndhdg==
+				Logger.log(Logger.no_prefix,"I've got a error for you after this next cleanup routine.\n"
+						+ "Not a fake, tragic error like last time,\n"
+						+ "A *real* error, with fatal consequences. And a real force exit this time."
+						+ "The good stuff. Our last resort."
+						+ "Part of me's going to miss these runtime structures, but at the end of the day they were just taking up memory on your system.");
+			}
+		});
 		CleanupTasks.add(()->Logger.log(0,"Cleaning up..."));
 		CleanupTasks.add(()->GLContextInitializer.doCursor(win,false,false));
+		CleanupTasks.add(()->fonts.clean());
 		CleanupTasks.add(()->GLContextInitializer.destroyGLContext());
 		CleanupTasks.add(()->stack.close());
 		CleanupTasks.add(()->Audio.cleanUp());
@@ -201,8 +208,8 @@ public class Main {
 		//		        }
 		//			}
 
-		IntBuffer testAv=stack.mallocInt(1);
-		glGetIntegerv(0x9048,testAv);
+//		IntBuffer testAv=stack.mallocInt(1);
+//		glGetIntegerv(0x9048,testAv);
 
 
 		float inte=10f;
@@ -212,6 +219,7 @@ public class Main {
 		float amb=0.02f;
 
 		Chamber test=new Chamber();
+		
 //		Thing hld=null;
 
 
@@ -245,7 +253,6 @@ public class Main {
 				new Light(Light.LIGHT_POSITION,-9,7,9, inte*r,inte*g,inte*b,1),
 				new Light(Light.LIGHT_POSITION,9,7,-9, inte*r,inte*g,inte*b,1),
 				new Light(Light.LIGHT_POSITION,9,7,9, inte*r,inte*g,inte*b,1),
-				//new Light(Light.LIGHT_DIRECTION,1,1,1, inte*r,inte*g,inte*b,1),
 				new Light(Light.LIGHT_AMBIENT,0,0,0, amb,amb,amb,1)));
 
 		//STOP PUTTING CHAMBER CONTENTS HERE
@@ -262,10 +269,14 @@ public class Main {
 		BloomHandler.init();
 //		SSAOHandler.init();
 		Shader screen=new Shader("screen");
-		Shader screen_basic=new Shader("screen_basic");
+		Shader screen_basic=new Shader("screen_basic_bloom");
 		Screen blindfold=new Screen();
 		GLContextInitializer.defaultMainShader=new Shader("mainShader");
-//		main.bind();
+		
+		//Load fonts:
+		fonts.add("din-bold","assets/fonts/din-bold",".png",6,18,"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{};':,./<>?");
+		fonts.add("consolas","assets/fonts/consolas",".png",6,18,"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{};':,./<>?");
+		
 		FrameBuffer fbo=new FrameBuffer(16,4,GL_RGBA16F);
 		FrameBuffer interfbo=new FrameBuffer(0,2,GL_RGBA16F);
 		FrameBuffer ssaoFBO=new FrameBuffer(0);
@@ -273,23 +284,20 @@ public class Main {
 		FrameBuffer interfbo2=new FrameBuffer(0,2,GL_RGBA8);
 		FrameBuffer interfbo3=new FrameBuffer(0,1,GL_RGBA8);
 		camera.position(0.0f,Player.height,0.0f);
-		//			Lighting.addLight(new Light(Light.LIGHT_DIRECTION,0,1,0, 0.8f,0.8f,0.8f,1));
-		//			Lighting.addLight(new Light(Light.LIGHT_DIRECTION,0,-1,0, 0.2f,0.2f,0.2f,1));
 		exposure=8.0f;
 		gamma=1.0f;
-//		Lighting.addLight(new Light(Light.LIGHT_POSITION, 0,-15,-7, inte*r, inte*g, inte*b, 1));
-//		Lighting.addLight(new Light(Light.LIGHT_AMBIENT,0,0,0, amb,amb,amb,1));
-		//Lighting.addLight(new Light(Light.LIGHT_POSITION, 0, 20, 0, inte*r, inte*g, inte*b, 1));
-		//Lighting.addLight(new Light(Light.LIGHT_POSITION,0,7,0, inte*r,inte*g,inte*b,1));
 		doCursor(win,true,true);
-		int fcc=0;
-		//glfwSwapInterval(0);
+		glfwSwapInterval(1);
 		//activeAtlas.atlas_tex.bind();
 		
 		PlayerInitializer.player=PlayerInitializer.initializePlayer();
 		GLContextInitializer.cameraTransform=new Transform();
 		
+		DisplayManager.load();
+		
 		while(!glfwWindowShouldClose(win)) {
+			timeProfiler.clear();
+			timeProfiler.start(5);
 			GLContextInitializer.timeCalcStart();
 			PoolStrainer.clean();
 
@@ -297,39 +305,12 @@ public class Main {
 			if(in.i(GLFW_KEY_ESCAPE)) {
 				Commands.requestClose();
 			}
-			int portalWorldSize=portalWorld.getWorld2().getBodies().size();
-			if(portalWorldSize>0) {
-				for(RigidBodyEntry rbe : portalWorld.getWorld1().getBodies()) {
-					RigidBodyEntry lrbe=((RigidBodyEntry)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("linked_rbe"));
-					if(portalWorld.getWorld2().getBodies().contains(lrbe)) {
-						RigidBodyEntry alrbe=((RigidBodyEntry)((UserPointerStructure)lrbe.b.getUserPointer()).getUserPointers().get("additional_linked_rbe"));
-						if(alrbe!=null) {
-							portalWorldSize--;
-						}
-						portalWorldSize--;
-					}
-				}
+			if(in.ir(GLFW_KEY_F3)) {
+				DisplayManager.toggle("debug");
 			}
-			if(portalWorldSize==0 && pPortalBodies>0) {
-				Logger.log(0,"Deconstructing portal physics world");
-				portalWorld.clearWorld2();
-				if(portalWorld.getWorld2().getBodies().size()>0) {
-					Logger.log(4,"Extra weird bodies in virtual portal physics world");
-				}
-			}
-			if(portalWorldSize>0 && pPortalBodies==0) {
-				Logger.log(0,"Rebuilding portal physics world");
-				portalWorld.rebuildWorld2WithDuplicateStructures();
-			}
-			if(dbgRenderWorld!=null) {
-				if(((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback() instanceof PortalNearCallback) {
-					if(((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints!=null) {
-						Util.clearsafe(((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints);
-					}
-				}
-			}
-			pPortalBodies=portalWorldSize;
-			if(portalWorldSize==0) {
+			timeProfiler.stop(5);
+			timeProfiler.start(0);
+			if(!MainExt.stepPortalPhysics()) {
 				physics.step();
 			} else {
 				portalWorld.step_linked();
@@ -337,33 +318,18 @@ public class Main {
 			
 			Movement.movement();
 			Thing.runRayTest(physics);
-
+			timeProfiler.stop(0);
+			
+			timeProfiler.start(5);
 			fbo.bind();
-//			main.bind();
 			glEnable(GL_DEPTH_TEST);
-			//activeAtlas.atlas_tex.upload();
 			glStencilMask(0xFF);
 			glClearColor(0,0,0,1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-//			Lighting.apply();
 			glPushMatrix();
-			//glColor4f(1,1,1,1);
-			//camera.grender(true);
 			GLContextInitializer.cameraTransform.set(camera.getInvTransform());
-//			System.out.println(camera.getTransform().origin.y);
-			glEnable(GL_TEXTURE_2D);
-			fcc++;
-			if(fcc==100) {
-				fcc=0;
-				StringBuilder dbg=new StringBuilder();
-				dbg.append(String.format("%3.2f",((float)(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/(float)Runtime.getRuntime().totalMemory())*100.0f));
-				dbg.append("% of ");
-				dbg.append(Runtime.getRuntime().totalMemory()/1048576.0f);
-				dbg.append("M, fr=");
-				dbg.append(String.format("%3.2f", fr));
-				dbg.append("fps");
-				System.out.println(dbg.toString());
-			}
+			timeProfiler.stop(5);
+			timeProfiler.start(1);
 			for(Thing thing : things) { //Interaction step
 				thing.interact();
 			}
@@ -379,83 +345,37 @@ public class Main {
 			PortalPair pp=PlayerInitializer.player.portalPair;
 //			pp.updateDifferences();
 			pp.logic();
+			
 			for(Thing thing : things) { //Clear step
 				thing.clearActivations();
 			}
-				
+			for(Thing2d i : displays) {
+				i.logic();
+			}
+			timeProfiler.stop(1);
+			
+			timeProfiler.start(2);
 			pp.apply();
+			timeProfiler.stop(2);
+			timeProfiler.start(3);
 			for(Thing thing : things) { //Render step
 				renderRoutine(thing,0);
 			}
-			for(Thing thing : things) { //Render step
+			for(Thing thing : things) { //Transparent render step
 				alphaRenderRoutine(thing,0);
 			}
-//			pp.alphaRender();
 			glStencilFunc(GL_ALWAYS,128,0xFF);
-			//renderRoutine(pp,0);
 			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-			
-			if(dbgRenderWorld!=null) {
-				if(((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback() instanceof PortalNearCallback) {
-					if(((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints==null) {
-						((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints=new ArrayList<PoolElement<ContactPoint>>();
-					} else {
-						for(PoolElement<ContactPoint> cp : ((PortalNearCallback)((CollisionDispatcher)dbgRenderWorld.dynamicsWorld.getDispatcher()).getNearCallback()).contactPoints) {
-							PoolElement<Matrix4f> p=DefaultVecmathPools.matrix4f.alloc();
-							PoolElement<Transform> tr=DefaultVecmathPools.transform.alloc();
-							Util.clear(p.o());
-							p.o().m00=0.1f;
-							p.o().m11=0.1f;
-							p.o().m22=0.1f;
-							p.o().m33=0.1f;
-							p.o().m03=cp.o().posA.x;
-							p.o().m13=cp.o().posA.y;
-							p.o().m23=cp.o().posA.z;
-							tr.o().set(p.o());
-							genericCube.setColor(cp.o().removed?1:0,cp.o().removed?0:1,0);
-							genericCube.copyData(GObject.COLOR_DATA, GL_DYNAMIC_DRAW);
-							genericCube.highRender_customTransform(tr.o());
-							p.free();
-							tr.free();
-						}
-					}
-				}
-				if(genericCube==null) {
-					genericCube=GenericCubeFactory.createGenericCube();
-					genericCube.wireframe=true;
-				}
-				glDisable(GL_DEPTH_TEST);
-				for(RigidBodyEntry rbe : dbgRenderWorld.getBodies()) {
-					Thing thing=(Thing)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("thing");
-					if(thing!=null) {
-						PoolElement<Matrix4f> p=DefaultVecmathPools.matrix4f.alloc();
-						PoolElement<Matrix4f> p1=DefaultVecmathPools.matrix4f.alloc();
-						PoolElement<Transform> tr=DefaultVecmathPools.transform.alloc();
-						Util.clear(p.o());
-						p.o().m00=thing.getShape().x;
-						p.o().m11=thing.getShape().y;
-						p.o().m22=thing.getShape().z;
-						p.o().m33=1;
-						rbe.b.getWorldTransform(tr.o()).getMatrix(p1.o());
-						p.o().mul(p1.o(),p.o());
-						tr.o().set(p.o());
-						Boolean otherWorld=(Boolean)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("other_world");
-						if(otherWorld!=null) {
-							genericCube.setColor(1,otherWorld?1:0,otherWorld?0:1);
-						} else {
-							genericCube.setColor(0,1,1);
-						}
-						genericCube.copyData(GObject.COLOR_DATA, GL_DYNAMIC_DRAW);
-						genericCube.highRender_customTransform(tr.o());
-						
-						p.free();
-						p1.free();
-						tr.free();
-					}
-				}
-				glEnable(GL_DEPTH_TEST);
+			timeProfiler.stop(3);
+			timeProfiler.start(8);
+			for(Thing2d i : displays) {
+				i.render();
 			}
-
+			timeProfiler.stop(8);
+			timeProfiler.start(4);
+			MainExt.renderDBGWorld();
+			timeProfiler.stop(4);
+			timeProfiler.start(6);
 			fbo.blitTo(interfbo,0,0);
 			//fbo.blitTo(ssaoMulFBO,3,0);
 			interfbo2.bind();
@@ -483,8 +403,9 @@ public class Main {
 			ssaoMulFBO.bindTexture(0,3);
 			blindfold.render();
 			glEnable(GL_DEPTH_TEST);
+			timeProfiler.stop(6);
 
-
+			timeProfiler.start(5);
 			for(Thing s : remSched) {
 				s.clean();
 				if(!things.remove(s)) {
@@ -496,12 +417,15 @@ public class Main {
 			}
 			remSched.clear();
 			addSched.clear();
+			timeProfiler.stop(5);
 			//System.gc();
 			//int targ_delta=1000000/(targ_fr+1); //Target frame time (us)
 			//while(micros()-t1 < targ_delta) {} //Accurate sleep routine (to regulate framerate)
 
-
-			glfwSwapBuffers(win);//Enforce V-SYNC
+			timeProfiler.start(7);
+			glfwSwapBuffers(win);
+			timeProfiler.stop(7);
+			timeProfiler.start(5);
 			//Handle replacement schedule
 			if(scheduledReplacement!=null) {
 				//Replace EVERYTHING
@@ -522,6 +446,8 @@ public class Main {
 				gcreq=false;
 			}
 			GLContextInitializer.timeCalcEnd();
+			timeProfiler.stop(5);
+			timeProfiler.submit();
 		}
 		CleanupTasks.cleanUp();
 	}

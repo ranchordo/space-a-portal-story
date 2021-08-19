@@ -10,7 +10,6 @@ public class LightingConfiguration extends Thing {
 		this.type="Lighting_Configuration";
 		this.lights=lights;
 		this.doPhysicsOnSerialization=true;
-		System.out.println(this.lights.length);
 	}
 	@Override
 	public void initPhysics() {}

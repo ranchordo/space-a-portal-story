@@ -78,19 +78,23 @@ public class PortalNearCallback extends NearCallback {
 					
 					PersistentManifold m=contactPointResult.getPersistentManifold();
 					if(m!=null) {
-						for(int i=m.getNumContacts()-1;i>=0;i--) {
-							ManifoldPoint point=m.getContactPoint(i);
-							point.getPositionWorldOnA(a);
-							point.getPositionWorldOnB(b);
-							boolean r=false;
-							if(removeContactPoint(a,b,(RigidBody)m.getBody0(),(RigidBody)m.getBody1())) {
-								r=true;
-								m.removeContactPoint(i);
-							}
-							if(contactPoints!=null) {
-								PoolElement<ContactPoint> p=ContactPoint.contactPointPool.alloc();
-								p.o().set(a,b,r);
-								contactPoints.add(p);
+						if(((UserPointerStructure)((RigidBody)m.getBody0()).getUserPointer()).getUserPointers().get("portal_tunnel")==null) {
+							if(((UserPointerStructure)((RigidBody)m.getBody1()).getUserPointer()).getUserPointers().get("portal_tunnel")==null) {
+								for(int i=m.getNumContacts()-1;i>=0;i--) {
+									ManifoldPoint point=m.getContactPoint(i);
+									point.getPositionWorldOnA(a);
+									point.getPositionWorldOnB(b);
+									boolean r=false;
+									if(removeContactPoint(a,b,(RigidBody)m.getBody0(),(RigidBody)m.getBody1())) {
+										r=true;
+										m.removeContactPoint(i);
+									}
+									if(contactPoints!=null) {
+										PoolElement<ContactPoint> p=ContactPoint.contactPointPool.alloc();
+										p.o().set(a,b,r);
+										contactPoints.add(p);
+									}
+								}
 							}
 						}
 					}

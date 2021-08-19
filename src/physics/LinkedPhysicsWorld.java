@@ -22,6 +22,9 @@ import lepton.engine.physics.UserPointerStructure;
 import lepton.optim.objpoollib.DefaultVecmathPools;
 import lepton.optim.objpoollib.PoolElement;
 import lepton.util.LeptonUtil;
+import objects.PortalPair;
+import objects.PortalTunnel;
+import objects.Thing;
 import util.Util;
 
 public class LinkedPhysicsWorld {
@@ -45,6 +48,8 @@ public class LinkedPhysicsWorld {
 	public static RigidBodyConstructionInfo getConstructionInfo(RigidBody b) {
 		return getConstructionInfo(b,b.getMotionState().getWorldTransform(new Transform()));
 	}
+	
+	private Thing portalTunnel;
 
 	private PhysicsWorld world1;
 	private PhysicsWorld world2;
@@ -83,6 +88,15 @@ public class LinkedPhysicsWorld {
 				}
 			}
 		}
+		for(RigidBodyEntry rbe : world2.getBodies()) {
+			if(((UserPointerStructure)rbe.b.getUserPointer()).ParentRBEntryPointer!=rbe) {
+				System.out.println("OK");
+			}
+			if(((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("portal_tunnel")!=null) {
+				world2.remove(rbe.b);
+			}
+		}
+		System.out.println(world2.getBodies().size());
 	}
 	public void rebuildWorld2WithoutDuplicateStructures() {
 		clearWorld2();
@@ -103,14 +117,22 @@ public class LinkedPhysicsWorld {
 		buildDuplicateStructures(PlayerInitializer.player.portalPair.difference_inv());
 	}
 	protected void buildDuplicateStructures(Transform difference) {
+		if(portalTunnel==null) {
+			portalTunnel=new PortalTunnel();
+			portalTunnel.init();
+			portalTunnel.addPhysics();
+			portalTunnel.setPhysicsWorld(world2);
+		} else {
+			world2.add(((UserPointerStructure)portalTunnel.geo.p.body.getUserPointer()).ParentRBEntryPointer);
+		}
+		portalTunnel.geo.p.body.setWorldTransform(PlayerInitializer.player.portalPair.p1);
+		((UserPointerStructure)portalTunnel.geo.p.body.getUserPointer()).addUserPointer("portal_tunnel",(Boolean)true);
 		ArrayList<RigidBodyEntry> toAdd=new ArrayList<RigidBodyEntry>();
 		for(RigidBodyEntry rbe : world2.getBodies()) {
 			RigidBodyEntry lrbe=((RigidBodyEntry)((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().get("linked_rbe"));
 			if(!world1.getBodies().contains(lrbe)) {
 				continue;
 			}
-//			Transform tr=rbe.b.getMotionState().getWorldTransform(new Transform());
-//			tr.mul(tr,difference);
 			RigidBody newb=new RigidBody(getConstructionInfo(rbe.b));
 			RigidBodyEntry additional_linked_rbe=new RigidBodyEntry(newb,rbe.group,rbe.mask);
 			for(Entry<String,Object> userPointer : ((UserPointerStructure)rbe.b.getUserPointer()).getUserPointers().entrySet()) {

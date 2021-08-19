@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import javax.swing.text.Segment;
 import javax.vecmath.Matrix3f;
 import javax.vecmath.Matrix4f;
 import javax.vecmath.Point3f;
@@ -33,6 +32,7 @@ import lepton.engine.physics.RigidBodyEntry;
 import lepton.engine.physics.UserPointerStructure;
 import lepton.engine.physics.WorldObject;
 import lepton.util.advancedLogger.Logger;
+import portalcasting.Segment;
 import util.SaveStateComponent;
 
 public abstract class Thing implements Serializable {
@@ -222,7 +222,7 @@ public abstract class Thing implements Serializable {
 	public void alphaRender() {
 		if(this.geo.g.hasAlpha) {this.geo.highRender();}
 	}
-	protected void onSerializationAdditional() {}
+//	protected void onSerializationAdditional() {}
 	
 	public final void onSerialization() {
 		physicsWorld=defaultPhysicsWorld;
@@ -231,7 +231,7 @@ public abstract class Thing implements Serializable {
 			this.addPhysics();
 		}
 		unpackSaveState();
-		onSerializationAdditional();
+//		onSerializationAdditional();
 	}
 	
 	public void unpackSaveState() {
@@ -312,9 +312,11 @@ public abstract class Thing implements Serializable {
 		return physicsWorld;
 	}
 	public void setPhysicsWorld(WorldObject w, PhysicsWorld p) {
-		RigidBodyEntry e=PhysicsWorld.getEntryFromRigidBody(this.geo.p.body);
-		physicsWorld.remove(e.b);
-		p.add(e);
+		RigidBodyEntry e=PhysicsWorld.getEntryFromRigidBody(w.p.body);
+		if(physicsWorld.getBodies().contains(e)) {physicsWorld.remove(e.b);}
+		if(!p.getBodies().contains(e)) {
+			p.add(e);
+		}
 		physicsWorld=p;
 	}
 	public void setPhysicsWorld(PhysicsWorld p) {

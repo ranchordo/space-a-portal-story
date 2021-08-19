@@ -69,9 +69,17 @@ public class Commands {
 		StringBuilder helpMenu=new StringBuilder();
 		for(Method m : Commands.class.getDeclaredMethods()) {
 			if(m.isAnnotationPresent(Command.class)) {
+				Class<?>[] params=m.getParameterTypes();
 				Command c=m.getAnnotation(Command.class);
 				helpMenu.append(m.getName());
-				helpMenu.append("() - ");
+				helpMenu.append("(");
+				for(int i=0;i<params.length;i++) {
+					if(i!=0) {
+						helpMenu.append(", ");
+					}
+					helpMenu.append(params[i].getName());
+				}
+				helpMenu.append(") - ");
 				helpMenu.append(c.desc());
 				helpMenu.append("\n");
 			}
