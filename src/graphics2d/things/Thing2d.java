@@ -6,6 +6,7 @@ import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
 
+import graphics2d.util.InstancedRenderer2d;
 import lepton.engine.rendering.GLContextInitializer;
 import lepton.engine.rendering.GObject;
 import lepton.engine.rendering.Tri;
@@ -71,6 +72,7 @@ public abstract class Thing2d {
 	public static float ratio2viewportY(float y) {
 		return (float) (2.0f*y*Math.tan(Math.toRadians(GLContextInitializer.fov/2.0f)));
 	}
+	public static InstancedRenderer2d renderer=new InstancedRenderer2d();
 	public float x;
 	public float y;
 	public PosMode posMode=PosMode.CENTER;

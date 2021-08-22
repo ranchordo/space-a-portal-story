@@ -546,8 +546,8 @@ public class PortalPair extends Thing {
 		initGObject(geofx);
 		initGObject(geo2fx);
 		
-		Shader portalShader=new Shader("specific/portal");
-		Shader portalFXShader=new Shader("specific/portalfx");
+		Shader portalShader=Main.shaderLoader.load("specific/portal");
+		Shader portalFXShader=Main.shaderLoader.load("specific/portalfx");
 		
 		geo.g.setRenderingShader(portalShader);
 		geo2.g.setRenderingShader(portalShader);

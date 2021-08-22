@@ -6,7 +6,9 @@ import java.util.HashSet;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
 
+import game.Main;
 import graphics2d.util.InstancedRenderConfig2d;
+import graphics2d.util.InstancedRenderer2d;
 import lepton.engine.rendering.InstanceAccumulator;
 import lepton.engine.rendering.Shader;
 
@@ -16,15 +18,12 @@ public class PieChart extends Thing2d {
 	public float[] data=null;
 	public Vector3f[] rgbs=null;
 	public float width=0.1f;
-	public PieChart(int elements, float nx, float ny, float nw, HashSet<InstancedRenderConfig2d> sl) {
+	private InstanceAccumulator ia;
+	public PieChart(int elements, float nx, float ny, float nw, InstancedRenderer2d sl) {
 		if(pieChartShader==null) {
-			pieChartShader=new Shader("specific/piechart");
-			pieChartShader.instanceAccumulator=new InstanceAccumulator(pieChartShader,16,"info_buffer");
-			InstancedRenderConfig2d ircd=new InstancedRenderConfig2d(pieChartShader,null);
-			if(!sl.contains(ircd)) {
-				sl.add(ircd);
-			}
+			pieChartShader=Main.shaderLoader.load("specific/piechart");
 		}
+		ia=sl.loadConfiguration(pieChartShader,null,Thing2d.genericSquare,16,"info_buffer").instanceAccumulator;
 		data=new float[elements];
 		rgbs=new Vector3f[elements];
 		x=nx;
@@ -35,7 +34,7 @@ public class PieChart extends Thing2d {
 		boolean tog=false;
 		for(int i=0;i<data.length;i++) {
 			data[i]=1;
-			GenericInstancedThing2d r=new GenericInstancedThing2d();
+			GenericInstancedThing2d r=new GenericInstancedThing2d(ia);
 			r.renderingShader=pieChartShader;
 			r.objectSize=GenericInstancedThing2d.defaultObjectSize+8;
 			tog=!tog;

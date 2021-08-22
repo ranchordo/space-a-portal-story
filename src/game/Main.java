@@ -23,7 +23,10 @@ import console.Commands;
 import console.JythonConsoleManager;
 import debug.TimeProfiler;
 import graphics.Camera;
+import graphics.InstancedRenderer3d;
+import graphics.InstancedRenderer3d.InstancedRenderRoutine3d;
 import graphics.RenderFeeder;
+import graphics.ShaderLoader;
 import graphics2d.presets.DebugScreen;
 import graphics2d.things.Thing2d;
 import graphics2d.util.Fonts;
@@ -112,12 +115,27 @@ public class Main {
 		activePortalTransform=portal;
 		thing.render(param);
 	}
+	private static void mainRenderRoutine() {
+		for(Thing thing : things) { //Render step
+			renderRoutine(thing,0);
+		}
+		for(Thing thing : things) { //Transparent render step
+			alphaRenderRoutine(thing,0);
+		}
+	}
 	public static MemoryStack stack;
 	public static PhysicsWorld physics;
 	public static LinkedPhysicsWorld portalWorld;
 	public static PhysicsWorld dbgRenderWorld=null;
 	public static TimeProfiler timeProfiler=new TimeProfiler("Physics","Thing logic","Portal graphics","Main render","Debug","Misc","Post-render","SwapBuffers","2D render");
 	public static Fonts fonts=new Fonts();
+	public static ShaderLoader shaderLoader=new ShaderLoader();
+	public static InstancedRenderer3d instancedRenderer=new InstancedRenderer3d();
+	public static InstancedRenderRoutine3d mainRenderRoutine=new InstancedRenderRoutine3d() {
+		@Override public void run() {
+			Main.mainRenderRoutine();
+		}
+	};
 	public static void MainLoop() {
 		stack=stackPush();
 		Logger.setCleanupTask(()->CleanupTasks.cleanUp());
@@ -126,8 +144,8 @@ public class Main {
 				//aHR0cHM6Ly9pMS50aGVwb3J0YWx3aWtpLm5ldC9pbWcvYy9jOS9HTGFET1Nfc3BfYTJfYnRzMV9pbnRybzAxLndhdg==
 				Logger.log(Logger.no_prefix,"I've got a error for you after this next cleanup routine.\n"
 						+ "Not a fake, tragic error like last time,\n"
-						+ "A *real* error, with fatal consequences. And a real force exit this time."
-						+ "The good stuff. Our last resort."
+						+ "A *real* error, with fatal consequences. And a real force exit this time.\n"
+						+ "The good stuff. Our last resort.\n"
 						+ "Part of me's going to miss these runtime structures, but at the end of the day they were just taking up memory on your system.");
 			}
 		});
@@ -228,7 +246,7 @@ public class Main {
 		//test.add(new FaithPlate(new Vector3f(4,0.04f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),new Vector3f(0,20,0)));
 		test.add(new Wall(new Vector2f(50,10), new Vector3f(0,0,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), LeptonUtil.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))));
+//		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), LeptonUtil.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))));
 		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
 		//((Door)hld).setAttached(test.add(new Wall(new Vector2f(10,10), new Vector3f(10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90))))));
 		//test.add(new Fizzler(new Vector2f(2,2), new Vector3f(5,2,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90)))));
@@ -268,10 +286,10 @@ public class Main {
 		Movement.initMovement();
 		BloomHandler.init();
 //		SSAOHandler.init();
-		Shader screen=new Shader("screen");
-		Shader screen_basic=new Shader("screen_basic_bloom");
+		Shader screen=shaderLoader.load("screen");
+		Shader screen_basic=shaderLoader.load("screen_basic_bloom");
 		Screen blindfold=new Screen();
-		GLContextInitializer.defaultMainShader=new Shader("mainShader");
+		GLContextInitializer.defaultMainShader=shaderLoader.load("mainShader");
 		
 		//Load fonts:
 		fonts.add("din-bold","assets/fonts/din-bold",".png",6,18,"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{};':,./<>?");
@@ -358,12 +376,7 @@ public class Main {
 			pp.apply();
 			timeProfiler.stop(2);
 			timeProfiler.start(3);
-			for(Thing thing : things) { //Render step
-				renderRoutine(thing,0);
-			}
-			for(Thing thing : things) { //Transparent render step
-				alphaRenderRoutine(thing,0);
-			}
+			instancedRenderer.renderInstanced(mainRenderRoutine);
 			glStencilFunc(GL_ALWAYS,128,0xFF);
 			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
 			timeProfiler.stop(3);

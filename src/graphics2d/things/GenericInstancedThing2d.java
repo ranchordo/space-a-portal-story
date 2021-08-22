@@ -2,20 +2,26 @@ package graphics2d.things;
 
 import javax.vecmath.Vector4f;
 
+import game.Main;
+import graphics2d.util.InstancedRenderConfig2d;
 import lepton.engine.rendering.GLContextInitializer;
+import lepton.engine.rendering.InstanceAccumulator;
 import lepton.engine.rendering.Shader;
 
 public class GenericInstancedThing2d extends Thing2d {
 	public static final int defaultObjectSize=8;
-	public static final Shader defaultGenericThing2dShader=new Shader("genericThing2d");
 	public float width;
 	public float height;
-	public Shader renderingShader=defaultGenericThing2dShader;
+	public Shader renderingShader=Main.shaderLoader.load("genericThing2d");
 	public float texX=0;
 	public float texY=0;
 	public float texW=1;
 	public float texH=1;
 	public int objectSize=defaultObjectSize;
+	
+	public GenericInstancedThing2d(InstanceAccumulator ia) {
+		this.ia=ia;
+	}
 	
 	public void refreshDataLength() {
 		if(data.length!=objectSize) {
@@ -25,6 +31,7 @@ public class GenericInstancedThing2d extends Thing2d {
 	}
 	public float[] additionalData=new float[0];
 	public float[] data=new float[objectSize];
+	private InstanceAccumulator ia=null;
 	@Override
 	public void render() {
 		refreshDataLength();
@@ -45,7 +52,7 @@ public class GenericInstancedThing2d extends Thing2d {
 				data[i+defaultObjectSize]=additionalData[i];
 			}
 		}
-		renderingShader.instanceAccumulator.add(data);
+		ia.add(data);
 	}
 	private Vector4f a=new Vector4f();
 	@Override

@@ -1,13 +1,16 @@
 package graphics2d.things;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import javax.vecmath.Vector4f;
 
+import game.Main;
 import graphics2d.util.FontAtlas;
 import graphics2d.util.Glyph;
 import graphics2d.util.InstancedRenderConfig2d;
+import graphics2d.util.InstancedRenderer2d;
 import lepton.engine.rendering.InstanceAccumulator;
 import lepton.engine.rendering.Shader;
 
@@ -20,7 +23,8 @@ public class TextGroup extends Thing2d {
 	public float r;
 	public float g;
 	public float b;
-	public TextGroup(String str, FontAtlas font, float x, float y, float height, float r, float g, float b, HashSet<InstancedRenderConfig2d> sl) {
+	private InstanceAccumulator ia;
+	public TextGroup(String str, FontAtlas font, float x, float y, float height, float r, float g, float b, InstancedRenderer2d sl) {
 		f=font;
 		s=str;
 		refreshString=true;
@@ -28,13 +32,9 @@ public class TextGroup extends Thing2d {
 		this.y=y;
 		this.height=height;
 		if(textShader==null) {
-			textShader=new Shader("specific/textChar");
-			textShader.instanceAccumulator=new InstanceAccumulator(textShader,12,"info_buffer");
-			InstancedRenderConfig2d ircd=new InstancedRenderConfig2d(textShader,f.textureImage);
-			if(!sl.contains(ircd)) {
-				sl.add(ircd);
-			}
+			textShader=Main.shaderLoader.load("specific/textChar");
 		}
+		ia=sl.loadConfiguration(textShader,f.textureImage,Thing2d.genericSquare,12,"info_buffer").instanceAccumulator;
 		this.r=r;
 		this.g=g;
 		this.b=b;
@@ -58,7 +58,7 @@ public class TextGroup extends Thing2d {
 				if(len<characters.size()) {
 					characters.remove(characters.size()-1);
 				} else {
-					characters.add((GenericInstancedThing2d)new GenericInstancedThing2d().setParent(parent));
+					characters.add((GenericInstancedThing2d)new GenericInstancedThing2d(ia).setParent(parent));
 				}
 			}
 			Glyph a=f.get('I');

@@ -23,6 +23,7 @@ import com.bulletphysics.linearmath.Transform;
 
 import game.Main;
 import game.PlayerInitializer;
+import graphics.InstancedRenderConfig3d;
 import graphics.PortalViewMatrixModifier;
 import lepton.engine.audio.Soundtrack;
 import lepton.engine.audio.SourcePool;
@@ -70,6 +71,8 @@ public abstract class Thing implements Serializable {
 				Main.camera.pos_out.z+pt.z);
 		physicsWorld.dynamicsWorld.rayTest(Main.camera.pos_out,a,f);
 	}
+	public transient InstancedThingParent instancedThingParent=null;
+	public transient InstancedRenderConfig3d instancedRenderConfig=null;
 	private transient PhysicsWorld physicsWorld=defaultPhysicsWorld;
 	private HashMap<String,Integer> IdFieldAssoc;
 	private transient ArrayList<WorldObject> gobjects;
@@ -187,7 +190,11 @@ public abstract class Thing implements Serializable {
 	
 	public void initGObject(WorldObject geo2) {
 		if(geo2==null) {return;}
-		gobjects.add(geo2);
+		if(geo2!=geo) {
+			gobjects.add(geo2);
+		}
+
+		if(geo2.g==null) {return;}
 		PortalViewMatrixModifier p=new PortalViewMatrixModifier();
 		geo2.g.viewMatrixModifier=p;
 	}
@@ -211,9 +218,11 @@ public abstract class Thing implements Serializable {
 		return this;
 	}
 	public void refresh() {
-		geo.g.refresh();
-		for(WorldObject g : gobjects) {
-			g.g.refresh();
+		if(geo.g!=null) {
+			geo.g.refresh();
+			for(WorldObject g : gobjects) {
+				g.g.refresh();
+			}
 		}
 	}
 	public void render() {
@@ -262,9 +271,11 @@ public abstract class Thing implements Serializable {
 		addPhysics(geo,group,mask);
 	}
 	public void initVBO() {
-		geo.g.initVBO();
-		for(WorldObject g : gobjects) {
-			g.g.initVBO();
+		if(geo.g!=null) {
+			geo.g.initVBO();
+			for(WorldObject g : gobjects) {
+				g.g.initVBO();
+			}
 		}
 	}
 	public void interact() {
