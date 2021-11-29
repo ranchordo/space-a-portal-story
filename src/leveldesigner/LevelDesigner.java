@@ -33,6 +33,20 @@ public class LevelDesigner {
 		genericCube.setColor(1,1,0,0.2f);
 		genericCube.copyData(GObject.COLOR_DATA,GL15.GL_STATIC_DRAW);
 	}
+	public static void refreshSelectedBox() {
+		PoolElement<Matrix4f> p1=DefaultVecmathPools.matrix4f.alloc();
+		PoolElement<Matrix4f> p2=DefaultVecmathPools.matrix4f.alloc();
+		Util.clear(p1.o());
+		p1.o().m00=selected.getShape().x;
+		p1.o().m11=selected.getShape().y;
+		p1.o().m22=selected.getShape().z;
+		p1.o().m33=1;
+		selected.geo.p.getTransform().getMatrix(p2.o());
+		p2.o().mul(p2.o(),p1.o());
+		genericCubeTransform.set(p2.o());
+		p1.free();
+		p2.free();
+	}
 	public static void setSelected(Thing selected) {
 		createGenericCube();
 		if(selected!=LevelDesigner.selected) {
@@ -40,19 +54,8 @@ public class LevelDesigner {
 //				LevelDesigner.selected.geo.g.wireframe=!LevelDesigner.selected.geo.g.wireframe;
 //			}
 //			selected.geo.g.wireframe=!selected.geo.g.wireframe;
-			PoolElement<Matrix4f> p1=DefaultVecmathPools.matrix4f.alloc();
-			PoolElement<Matrix4f> p2=DefaultVecmathPools.matrix4f.alloc();
-			Util.clear(p1.o());
-			p1.o().m00=selected.getShape().x;
-			p1.o().m11=selected.getShape().y;
-			p1.o().m22=selected.getShape().z;
-			p1.o().m33=1;
-			selected.geo.p.getTransform().getMatrix(p2.o());
-			p2.o().mul(p2.o(),p1.o());
-			genericCubeTransform.set(p2.o());
-			p1.free();
-			p2.free();
 			LevelDesigner.selected=selected;
+			refreshSelectedBox();
 			if(insertable.contains(selected.getClass())) {
 				menu.refreshParams();
 			}

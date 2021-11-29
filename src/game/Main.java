@@ -180,7 +180,7 @@ public class Main {
 		
 //		InstanceAccumulator.runAggressiveChangeCheckDefault=true;
 		InstanceAccumulator.mergeSSBOsOnDuplicate=InstanceAccumulator.NO_MERGE;
-				
+		
 		ConsoleWindow mainConsoleWindow=new ConsoleWindow(false,800,600,"Space: A Portal Story - Debug console",(s)->Main.jythonConsoleHandler.recv(s),"Debug console ready.\nStarting the game shortly...");
 		mainConsoleWindow.setVisible(true);
 		consoleWindowHandler=new ConsoleWindowHandler(mainConsoleWindow);

@@ -119,11 +119,13 @@ public class Wall extends Thing {
 		sided=Math.round(in);
 		sided=Math.max(sided,SINGLE);
 		sided=Math.min(sided,ALL);
-		this.geo.g.vmap.tex.delete();
-		this.geo.g.clean();
+//		this.geo.g.vmap.tex.delete();
+//		this.geo.g.clean();
 		initGeo();
-		this.geo.g.initVBO();
+//		this.geo.g.initVBO();
+		this.geo.g.unlock();
 		this.geo.g.refresh();
+		this.geo.g.lock();
 		return this;
 	}
 	public Wall setTextureType(int tt) {
@@ -194,6 +196,9 @@ public class Wall extends Thing {
 		}
 	}
 	private void initTexture() {
+		if(this.geo.g.vmap.tex.anyLoaded()) {
+			this.geo.g.vmap.tex=new Texture(this.geo.g.vmap.tex);
+		}
 		this.portalable=true;
 		if(textureType==1) {
 			this.geo.g.setColor(0.2f,0.2f,0.25f);
@@ -209,10 +214,12 @@ public class Wall extends Thing {
 		} catch (IOException e) {
 			Logger.log(4,e.toString(),e);
 		}
+		instancedRenderConfig=Main.instancedRenderer.loadConfiguration(Main.shaderLoader.load("genericInstanced"),this.geo.g.vmap.tex,this.geo.g,objectSize,"info_buffer");
 	}
 	public void initGeo() {
 		if(this.geo==null) {this.geo=new WorldObject();}
-		this.geo.g=new GObject();
+		if(this.geo.g==null) {this.geo.g=new GObject();}
+		this.geo.g.unlock();
 		this.geo.g.useTex=true;
 		this.geo.g.vmap.vertices=new ArrayList<Vector3f>();
 		this.geo.g.vmap.vertices.add(new Vector3f(-1,-1,-1));
@@ -228,8 +235,8 @@ public class Wall extends Thing {
 		this.geo.g.vmap.normals=new ArrayList<Vector3f>();
 		this.geo.g.vmap.normals.add(new Vector3f(0,0,-1));
 		this.geo.g.vmap.normals.add(new Vector3f(0,0, 1));
-		this.geo.g.vmap.normals.add(new Vector3f(0, 1,0));
 		this.geo.g.vmap.normals.add(new Vector3f(0,-1,0));
+		this.geo.g.vmap.normals.add(new Vector3f(0, 1,0));
 		this.geo.g.vmap.normals.add(new Vector3f( 1,0,0));
 		this.geo.g.vmap.normals.add(new Vector3f(-1,0,0));
 		this.geo.g.vmap.texcoords=new ArrayList<Vector2f>();
@@ -264,6 +271,5 @@ public class Wall extends Thing {
 		this.geo.g.lock();
 
 		initTexture();
-		if(instancedRenderConfig==null) {instancedRenderConfig=Main.instancedRenderer.loadConfiguration(Main.shaderLoader.load("genericInstanced"),this.geo.g.vmap.tex,this.geo.g,objectSize,"info_buffer");}
 	}
 }

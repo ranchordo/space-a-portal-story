@@ -21,8 +21,11 @@ public class InsertableObjectDescriptor {
 			try {
 				method.invoke(thing, (Object[])data);
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+				Logger.log(3,e.getCause().toString());
+				e.getCause().printStackTrace();
 				Logger.log(4,e.toString(),e);
 			}
+			LevelDesigner.refreshSelectedBox();
 		}
 		public Float[] get(Thing thing) {
 			Float[] ret=data.get(thing);
