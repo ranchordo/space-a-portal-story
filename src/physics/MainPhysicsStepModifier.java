@@ -47,8 +47,8 @@ public class MainPhysicsStepModifier extends GenericPhysicsStepModifier {
 				}
 				Transform btr=b.getMotionState().getWorldTransform(mm);
 				Vector3f pos=btr.origin;
-				double r1=Util.distance(pos,pp.p1.origin);
-				double r2=Util.distance(pos,pp.p2.origin);
+				double r1=Util.distance(pos,pp.p1().origin);
+				double r2=Util.distance(pos,pp.p2().origin);
 				float t=pp.getShape().length()+bthing.getShape().length();
 				if((r1>t && r2>t)) {
 					continue;
@@ -56,7 +56,7 @@ public class MainPhysicsStepModifier extends GenericPhysicsStepModifier {
 				
 				int p=(r1>r2)?2:1;
 				if(p!=0) {
-					pos.sub(p==1?pp.p1.origin:pp.p2.origin);
+					pos.sub(p==1?pp.p1().origin:pp.p2().origin);
 					float dot=(p==1?pp.normal1:pp.normal2).dot(pos);
 					p=dot>=0?p:0;
 				}

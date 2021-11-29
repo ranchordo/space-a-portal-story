@@ -45,13 +45,13 @@ public abstract class PortalCaster {
 				}
 			}
 		}
-		float fl=pp.geo.g.rayTest_distance(start,control,pp.p1);
+		float fl=pp.geo.g.rayTest_distance(start,control,pp.p1());
 		if(fl>0.0f && (fl<f || f<0.0f)) {
 			f=fl;
 			singleCastResult.hit=pp;
 			singleCastResult.portalhit=1;
 		}
-		fl=pp.geo2.g.rayTest_distance(start,control,pp.p2);
+		fl=pp.geo2.g.rayTest_distance(start,control,pp.p2());
 		if(fl>0.0f && (fl<f || f<0.0f)) {
 			f=fl;
 			singleCastResult.hit=pp;

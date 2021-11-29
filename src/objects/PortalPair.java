@@ -2,6 +2,7 @@ package objects;
 
 import static org.lwjgl.opengl.GL15.*;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.vecmath.AxisAngle4f;
@@ -14,6 +15,7 @@ import javax.vecmath.Vector3f;
 import com.bulletphysics.linearmath.Transform;
 
 import game.Main;
+import graphics.PortalViewMatrixModifier;
 import lepton.engine.physics.PhysicsObject;
 import lepton.engine.physics.WorldObject;
 import lepton.engine.rendering.GLContextInitializer;
@@ -36,7 +38,7 @@ public class PortalPair extends Thing {
 	 */
 	//Based on this partition schema, 63 stencil iterations is the maximum allowed.
 	private static final long serialVersionUID = 2380326466588862899L;
-	public static final int STENCIL_ITERATIONS=2;
+	public static final int STENCIL_ITERATIONS=100;
 	public static final float FUNNELING_SCALE=3.0f;
 	public static final float FUNNELING_DIST=20.0f;
 	public static final float FUNNELING_VEL_THSHLD=2.0f;
@@ -54,8 +56,12 @@ public class PortalPair extends Thing {
 	public static final float PORTAL_WIDTH=1.0f;
 	public static final float PORTAL_HEIGHT=1.8f;
 	public static final List<String> PASSES=Arrays.asList(new String[] {"Cube", "Player", "Pellet", "Turret", "Portable_wall"});
-	public transient Transform p1;
-	public transient Transform p2;
+	private transient Transform p1;
+	private transient Transform p2;
+	public Transform p1() {return p1;}
+	public Transform p2() {return p2;}
+	public void sp1(Transform p1) {this.p1=p1; onTransformUpdate();}
+	public void sp2(Transform p2) {this.p2=p2; onTransformUpdate();}
 	private transient Transform diff;
 	private transient Transform diffi;
 	public boolean placed1=false;
@@ -181,7 +187,7 @@ public class PortalPair extends Thing {
 		
 		glColorMask(false,false,false,false);
 		GLContextInitializer.useGraphics=false;
-		Main.portalRenderRoutine(this,outside,portal); //              Render portal into stencil and depth
+		//Main.portalRenderRoutine(this,outside,portal); //              Render portal into stencil and depth
 		
 		glColorMask(true, true, true, true);
 		GLContextInitializer.useGraphics=true;
@@ -199,7 +205,7 @@ public class PortalPair extends Thing {
 		}
 		Main.alphaRenderRoutine(this,inside);
 		glStencilFunc(GL_EQUAL,offset+1+base,0xFF);
-		Main.portalRenderRoutine(this,outside,portal);
+		//Main.portalRenderRoutine(this,outside,portal);
 //		glStencilFunc(GL_EQUAL,0,0xFF);
 		glStencilFunc(GL_ALWAYS,0x00,0xFF);
 	}
@@ -400,6 +406,10 @@ public class PortalPair extends Thing {
 		if(attached1!=null) {handlePortalFollowing(attached1,1);}
 		if(attached2!=null) {handlePortalFollowing(attached2,2);}
 		updateDifferences();
+	}
+	public void onTransformUpdate() {
+		updateDifferences();
+		PortalViewMatrixModifier.cacheLevels();
 	}
 	private transient Matrix4f invertedCheckin;
 	private transient Transform trtemp;

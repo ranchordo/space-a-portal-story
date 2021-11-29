@@ -125,7 +125,7 @@ public class LinkedPhysicsWorld {
 		} else {
 			world2.add(((UserPointerStructure)portalTunnel.geo.p.body.getUserPointer()).ParentRBEntryPointer);
 		}
-		portalTunnel.geo.p.body.setWorldTransform(PlayerInitializer.player.portalPair.p1);
+		portalTunnel.geo.p.body.setWorldTransform(PlayerInitializer.player.portalPair.p1());
 		((UserPointerStructure)portalTunnel.geo.p.body.getUserPointer()).addUserPointer("portal_tunnel",(Boolean)true);
 		ArrayList<RigidBodyEntry> toAdd=new ArrayList<RigidBodyEntry>();
 		for(RigidBodyEntry rbe : world2.getBodies()) {

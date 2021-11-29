@@ -56,8 +56,8 @@ public class Main2PhysicsStepModifier extends GenericPhysicsStepModifier {
 				}
 				Transform btr=b.getMotionState().getWorldTransform(mm);
 				Vector3f pos=btr.origin;
-				double r1=Util.distance(pos,pp.p1.origin);
-				double r2=Util.distance(pos,pp.p2.origin);
+				double r1=Util.distance(pos,pp.p1().origin);
+				double r2=Util.distance(pos,pp.p2().origin);
 				float t=pp.getShape().length()+bthing.getShape().length();
 				if((r1>t && r2>t)) {
 					bthing.currentPortalStatus=0;

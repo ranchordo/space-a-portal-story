@@ -26,7 +26,7 @@ public class InstancedRenderConfig3d {
 	public boolean equals(Object o) {
 		if(o instanceof InstancedRenderConfig3d) {
 			if(((InstancedRenderConfig3d)o).shader==this.shader) {
-				if(((InstancedRenderConfig3d)o).geo==this.geo) {
+				if(((InstancedRenderConfig3d)o).geo.hashCode()==this.geo.hashCode()) {
 					if(((InstancedRenderConfig3d)o).tex==this.tex) {
 						return true;
 					}

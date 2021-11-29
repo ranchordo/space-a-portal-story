@@ -58,7 +58,9 @@ public class TextGroup extends Thing2d {
 				if(len<characters.size()) {
 					characters.remove(characters.size()-1);
 				} else {
-					characters.add((GenericInstancedThing2d)new GenericInstancedThing2d(ia).setParent(parent));
+					GenericInstancedThing2d t=(GenericInstancedThing2d)new GenericInstancedThing2d(ia).setParent(parent);
+					t.posMode=this.posMode;
+					characters.add(t);
 				}
 			}
 			Glyph a=f.get('I');
@@ -79,7 +81,7 @@ public class TextGroup extends Thing2d {
 					c.texY=0;
 					c.texW=(g.end-g.start)/(float)f.getWidth();
 					c.texH=1;
-					c.renderingShader=textShader;
+//					c.renderingShader=textShader;
 					c.refreshDataLength();
 					c.additionalData[0]=this.r;
 					c.additionalData[1]=this.g;
@@ -94,6 +96,7 @@ public class TextGroup extends Thing2d {
 			}
 			refreshString=false;
 		}
+		runEventListeners();
 	}
 	@Override
 	public void render() {
@@ -104,11 +107,11 @@ public class TextGroup extends Thing2d {
 	private Vector4f a=new Vector4f();
 	@Override
 	public Vector4f getBoundingBox() {
-		if(characters.size()>0) {
-			a.set(x,y,characters.get(characters.size()-1).getBoundingBox().z,height+y);
-			return a;
-		}
-		return null;
+		if(characters.size()==0) {a.set(x,y,x,y); return a;}
+		Vector4f bb0=characters.get(0).getBoundingBox();
+		Vector4f bb1=characters.get(characters.size()-1).getBoundingBox();
+		a.set(bb0.x,bb1.y,bb1.z,bb0.w);
+		return a;
 	}
 	@Override
 	public Thing2d setParent(Thing2d parent) {

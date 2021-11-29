@@ -6,29 +6,30 @@ import javax.vecmath.Vector4f;
 
 public class Group2d extends Thing2d {
 	private ArrayList<Thing2d> things=new ArrayList<Thing2d>();
-	public void init() {
+	@Override public void init() {
 		for(Thing2d thing : things) {
 			thing.init();
 		}
 	}
-	public void render() {
+	@Override public void render() {
 		for(Thing2d thing : things) {
 			thing.render();
 		}
 	}
-	public void logic() {
+	@Override public void logic() {
 		for(Thing2d thing : things) {
 			thing.logic();
 		}
 	}
 	private Vector4f bb=new Vector4f(0,0,0,0);
-	public void add(Thing2d i) {
+	public Thing2d add(Thing2d i) {
 		things.add(i);
+		return i;
 	}
 	public ArrayList<Thing2d> getList() {
 		return things;
 	}
-	public Thing2d setParent(Thing2d parent) {
+	@Override public Thing2d setParent(Thing2d parent) {
 		for(Thing2d thing : things) {
 			thing.setParent(parent);
 		}

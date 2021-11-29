@@ -29,10 +29,6 @@ public class LightingConfiguration extends Thing {
 		
 	}
 	@Override
-	public void interact() {
-		this.interacted=false;
-	}
-	@Override
 	public void logic() {
 		if(activations>=activationThreshold) {
 			sendingActivations=true;

@@ -27,15 +27,21 @@ import lepton.util.advancedLogger.Logger;
 public class DebugScreen extends Thing2d {
 	public Group2d group=new Group2d();
 	public void init() {
-		group.add(new TextGroup("No data",Main.fonts.get("consolas"),-1,0.9f,0.05f,0.2f,0.2f,0.2f,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.TOP_LEFT).initThis());
-//		group.add(new TextGroup("Hi, this is a test",Main.fonts.get("consolas"),-1,0.9f-0.1f,0.07f).setAsParent().setPosMode(Thing2d.PosMode.TOP_LEFT));
+		Thing2d t=group.add(new TextGroup("No data",Main.fonts.get("consolas"),-1,0.9f,0.05f,0.2f,0.2f,0.2f,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.TOP_LEFT).initThis());
+		//		group.add(new TextGroup("Hi, this is a test",Main.fonts.get("consolas"),-1,0.9f-0.1f,0.07f).setAsParent().setPosMode(Thing2d.PosMode.TOP_LEFT));
 		group.add(new PieChart(Main.timeProfiler.times.length,0.9f,-0.9f,0.4f,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.BOTTOM_RIGHT).initThis());
+		t.mouseOn=new Thing2d.EventListener() {@Override public void onEvent() {System.out.println("dbgtext.event.mouseOn");}};
+		t.mouseOff=new Thing2d.EventListener() {@Override public void onEvent() {System.out.println("dbgtext.event.mouseOff");}};
+		t.mouseClick=new Thing2d.EventListener() {@Override public void onEvent() {System.out.println("dbgtext.event.mouseClick");}};
+		t.mouseClickRight=new Thing2d.EventListener() {@Override public void onEvent() {System.out.println("dbgtext.event.mouseClickRight");}};
+		t.mouseClickMiddle=new Thing2d.EventListener() {@Override public void onEvent() {System.out.println("dbgtext.event.mouseClickMiddle");}};
 		float height=-0.9f;
 		for(int i=Main.timeProfiler.times.length-1;i>=0;i--) {
 			Vector3f col=((PieChart)group.getList().get(1)).rgbs[i];
 			height+=0.05;
 			group.add(new TextGroup(Main.timeProfiler.time_names[i],Main.fonts.get("consolas"),0.4f,height,0.03f,col.x,col.y,col.z,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.BOTTOM_RIGHT).initThis());
 		}
+		
 	}
 	private StringBuilder dbg=new StringBuilder();
 	private int fc=0;

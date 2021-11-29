@@ -18,14 +18,17 @@ import com.bulletphysics.collision.shapes.CollisionShape;
 import com.bulletphysics.dynamics.RigidBodyConstructionInfo;
 import com.bulletphysics.linearmath.Transform;
 
+import game.DisplayManager;
 import game.Main;
 import static game.Main.in;
 import game.SaveState;
 import lepton.engine.physics.PhysicsWorld;
 import lepton.engine.physics.WorldObject;
+import lepton.engine.rendering.GLContextInitializer;
 import lepton.engine.rendering.Tri;
 import lepton.util.LeptonUtil;
 import lepton.util.advancedLogger.Logger;
+import physics.Movement;
 
 public class Player extends Thing {
 	private static final long serialVersionUID = 1458724178644370708L;
@@ -130,7 +133,7 @@ public class Player extends Thing {
 		Vector3f pt=new Vector3f(0,0,-1);
 		Matrix3f rs=new Matrix3f();
 		Main.camera.getInvTransform().getMatrix(trmat).getRotationScale(rs);
-		tr=geo.p.getTransform();
+		tr.set(geo.p.getTransform());
 		perms[0].set(shape.x,0,0);
 		perms[1].set(-shape.x,0,0);
 		perms[2].set(0,shape.y,0);
@@ -161,7 +164,20 @@ public class Player extends Thing {
 			if(thing.geo.p.body==null) {continue;}
 			if(thing.portalsIgnore) {continue;}
 			//float f=thing.geo.rayTest_distance(Renderer.camera.pos_out,targ_world,thing.geo.body.getMotionState().getWorldTransform(new Transform()));
-			Tri t=thing.geo.g.rayTest_closest(Main.camera.pos_out,targ_world,thing.geo.p.body.getMotionState().getWorldTransform(new Transform()));
+			thing.geo.p.body.getMotionState().getWorldTransform(tr).getMatrix(trmat);
+			if(thing.isScaleNormalized) {
+				trmat.m00*=thing.shape.x;
+				trmat.m10*=thing.shape.x;
+				trmat.m20*=thing.shape.x;
+				trmat.m01*=thing.shape.y;
+				trmat.m11*=thing.shape.y;
+				trmat.m21*=thing.shape.y;
+				trmat.m02*=thing.shape.z;
+				trmat.m12*=thing.shape.z;
+				trmat.m22*=thing.shape.z;
+			}
+			tr.set(trmat);
+			Tri t=thing.geo.g.rayTest_closest(Main.camera.pos_out,targ_world,tr);
 			if(t!=null) {
 				float f=t.raytest_t;
 				if(f>=0-1e-6) {
@@ -202,7 +218,7 @@ public class Player extends Thing {
 			Transform newtrans=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(inter_axis.x,inter_axis.y,inter_axis.z,-angrad))),intersection,1.0f));
 			if(portal==1) {
 				portalPair.placed1=true;
-				portalPair.p1=newtrans;
+				portalPair.sp1(newtrans);
 				if(portalPair.attached1!=null) {
 					portalPair.attached1.lastPortalCheckin1=null;
 //					portalPair.attached1.npflag=false;
@@ -213,7 +229,7 @@ public class Player extends Thing {
 				portalPair.attached1=cdt_thing;
 			} else if(portal==2) {
 				portalPair.placed2=true;
-				portalPair.p2=newtrans;
+				portalPair.sp2(newtrans);
 				if(portalPair.attached2!=null) {
 					portalPair.attached2.lastPortalCheckin2=null;
 //					portalPair.attached2.npflag=false;
@@ -238,18 +254,36 @@ public class Player extends Thing {
 	private Vector3f linvel=new Vector3f();
 	private Matrix4f inverseTransform=new Matrix4f();
 	public Matrix4f getInverseTransform() {return inverseTransform;}
+	private int prevCursorMode=GLFW_CURSOR_NORMAL;
 	@Override
 	public void logic() {
+		if(!Main.inDesignerCycle) {
+			Movement.movement();
+		}
 		geo.p.body.getLinearVelocity(linvel);
 		linvel.set(linvel.x,0,linvel.z);
 		//System.out.println(linvel.length());
 		//System.out.println(npflag+"1, "+npflag2+"2, "+portalingCollisionsEnabled+"col");
 		//if(inverseTransform==null) {inverseTransform=new Matrix4f();}
-		if(in.mr(GLFW_MOUSE_BUTTON_LEFT)) {
-			placePortal(1);
-		}
-		if(in.mr(GLFW_MOUSE_BUTTON_RIGHT)) {
-			placePortal(2);
+		if(!this.inGodMode) {
+			if(in.mr(GLFW_MOUSE_BUTTON_LEFT)) {
+				placePortal(1);
+			}
+			if(in.mr(GLFW_MOUSE_BUTTON_RIGHT)) {
+				placePortal(2);
+			}
+		} else {
+			if(in.ir(GLFW_KEY_F1)) {
+				if(Main.inDesignerCycle) {
+					glfwSetInputMode(GLContextInitializer.win,GLFW_CURSOR,prevCursorMode);
+					DisplayManager.hide("designerinsert");
+				} else {
+					prevCursorMode=glfwGetInputMode(GLContextInitializer.win,GLFW_CURSOR);
+					glfwSetInputMode(GLContextInitializer.win,GLFW_CURSOR,GLFW_CURSOR_NORMAL);
+					DisplayManager.show("designerinsert");
+				}
+				Main.inDesignerCycle=!Main.inDesignerCycle;
+			}
 		}
 		
 		if(game.Main.isDesigner) {

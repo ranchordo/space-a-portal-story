@@ -1,16 +1,16 @@
-#version 330 core
+#version 430 core
 #define pi 3.1415926535897932384
 #define MAX_LIGHTS 50
 
-//struct Info {
-//	mat4 obj2world;
-//	vec4 shapeinfo;
-//	vec4 texinfo;
-//};
+struct Info {
+	mat4 obj2world;
+	vec4 shapeinfo;
+	vec4 texinfo;
+};
 
-//layout (std140) buffer info_buffer {
-//	Info infos[];
-//};
+layout (std140) buffer info_buffer {
+	Info infos[];
+};
 
 uniform mat4 world2view=mat4(1.0);
 uniform mat4 proj_matrix=mat4(1.0);
@@ -26,8 +26,8 @@ attribute vec4 material;
 
 varying vec2 texCoords;
 void main() {
-	//Info info=infos[gl_InstanceID];
-	mat4 master_matrix=mat4(1);//info.obj2world;
+	Info info=infos[gl_InstanceID];
+	mat4 master_matrix=info.obj2world;
 	mat4 mvp=proj_matrix*world2view*master_matrix;
-	gl_Position=mvp*vec4(glv,1.0);//*info.shapeinfo.xyz,1.0);
+	gl_Position=mvp*vec4(glv*info.shapeinfo.xyz,1.0);
 }

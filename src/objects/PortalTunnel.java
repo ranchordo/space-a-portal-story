@@ -16,7 +16,7 @@ public class PortalTunnel extends Thing {
 	@Override
 	public void initPhysics() {
 		this.geo.p.mass=0;
-		RigidBodyConstructionInfo body=this.geo.p.initPhysics_mesh(this.geo.g,new Transform(PlayerInitializer.player.portalPair.p1));
+		RigidBodyConstructionInfo body=this.geo.p.initPhysics_mesh(this.geo.g,new Transform(PlayerInitializer.player.portalPair.p1()));
 		body.restitution=1;
 		body.friction=1f;
 		this.geo.p.doBody(body);

@@ -32,18 +32,18 @@ varying vec3 normal_orig;
 varying mat3 TBN;
 varying vec4 material_v;
 varying vec3 campos;
-//uniform sampler2D albedo;
-//uniform sampler2D normal;
+uniform sampler2D albedo;
+uniform sampler2D normal;
 void main() {
 	vec4 intensity_in=intensity;
 	vec3 norm=normalize(vec3(normal_orig.x,normal_orig.y,normal_orig.z));
 	if((textureUse&2)>0) {
-		//vec3 normal_tex=texture2D(normal,texCoords).xyz;
-		//normal_tex=normal_tex*2.0 - 1.0;
-		//normal_tex=vec3(-normal_tex.x,normal_tex.y,normal_tex.z);
-		//norm=normalize(TBN * normal_tex);
-		////normal=TBN * normal_tex;
-		////normal=normal+1.0f;
+		vec3 normal_tex=texture2D(normal,texCoords).xyz;
+		normal_tex=normal_tex*2.0 - 1.0;
+		normal_tex=vec3(-normal_tex.x,normal_tex.y,normal_tex.z);
+		norm=normalize(TBN * normal_tex);
+		//normal=TBN * normal_tex;
+		//normal=normal+1.0f;
 	}
 	vec3 ambient=vec3(0,0,0);
 	if(useLighting>=1) {
@@ -80,8 +80,8 @@ void main() {
 	}
 	vec4 fcol=vec4((intensity_in * col).xyz,col.w);
 	if((textureUse&1)>0) {
-		//vec4 tcol=texture2D(albedo,texCoords);
-		//fcol=fcol*tcol;
+		vec4 tcol=texture2D(albedo,texCoords);
+		fcol=fcol*tcol;
 	}
 	
 	FragColor=fcol;//vec4(((norm/2.0)+0.5)*0.15,1);

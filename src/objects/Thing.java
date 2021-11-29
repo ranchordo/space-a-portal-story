@@ -1,6 +1,7 @@
 package objects;
 
 import static lepton.engine.physics.WorldObject.pnull;
+import static org.lwjgl.glfw.GLFW.*;
 
 import java.io.Serializable;
 import java.lang.annotation.ElementType;
@@ -32,7 +33,11 @@ import lepton.engine.physics.PhysicsWorld;
 import lepton.engine.physics.RigidBodyEntry;
 import lepton.engine.physics.UserPointerStructure;
 import lepton.engine.physics.WorldObject;
+import lepton.engine.rendering.GLContextInitializer;
+import lepton.engine.rendering.Tri;
+import lepton.util.InputHandler;
 import lepton.util.advancedLogger.Logger;
+import leveldesigner.LevelDesigner;
 import portalcasting.Segment;
 import util.SaveStateComponent;
 
@@ -53,17 +58,23 @@ public abstract class Thing implements Serializable {
 	protected static final RayResultCallback f=new RayResultCallback() {
 		@Override
 		public float addSingleResult(LocalRayResult res, boolean b) {
-			Thing.rayTest.add(res);
+			Thing.rayTest.add((RigidBody)res.collisionObject);
 			return 0;
 		}
 		
 	};
 	private static transient Vector3f a=new Vector3f();
+	private static transient Matrix4f b=new Matrix4f();
 	public static void runRayTest(PhysicsWorld physicsWorld) {
-		rayTest=new ArrayList<LocalRayResult>();
-		Vector3f pt=new Vector3f(0,0,-2);
+		if(Main.frameCount%20>0) {
+			return;
+		}
+		if(a==null) {a=new Vector3f();}
+		if(b==null) {b=new Matrix4f();}
+		rayTest.clear();
+		Vector3f pt=new Vector3f(0,0,-Tri.CLIP_DISTANCE); //Used to be 2 units limited distance
 		Matrix3f rs=new Matrix3f();
-		Main.camera.getTransform().getMatrix(new Matrix4f()).getRotationScale(rs);
+		Main.camera.getTransform().getMatrix(b).getRotationScale(rs);
 		rs.transform(pt);
 		a.set(
 				Main.camera.pos_out.x+pt.x,
@@ -71,15 +82,17 @@ public abstract class Thing implements Serializable {
 				Main.camera.pos_out.z+pt.z);
 		physicsWorld.dynamicsWorld.rayTest(Main.camera.pos_out,a,f);
 	}
-	public transient InstancedThingParent instancedThingParent=null;
 	public transient InstancedRenderConfig3d instancedRenderConfig=null;
-	private transient PhysicsWorld physicsWorld=defaultPhysicsWorld;
+	protected transient PhysicsWorld physicsWorld=defaultPhysicsWorld;
 	private HashMap<String,Integer> IdFieldAssoc;
 	private transient ArrayList<WorldObject> gobjects;
 	protected SaveStateComponent saveStateComponent;
 	protected transient Soundtrack soundtrack;
 	public transient SourcePool sourcePool;
-	protected static ArrayList<LocalRayResult> rayTest=new ArrayList<LocalRayResult>();
+	protected static HashSet<RigidBody> rayTest=new HashSet<RigidBody>();
+	public boolean isScaleNormalized=false;
+	
+	protected InputHandler in;
 	
 	protected boolean funnelPrevUseGravity=true;
 	public boolean funnelInFunnel=false;
@@ -195,8 +208,7 @@ public abstract class Thing implements Serializable {
 		}
 
 		if(geo2.g==null) {return;}
-		PortalViewMatrixModifier p=new PortalViewMatrixModifier();
-		geo2.g.viewMatrixModifier=p;
+		geo2.g.viewMatrixModifier=new PortalViewMatrixModifier();
 	}
 	public boolean exemptFromChamberFeed=false;
 	public void doSaveState() { //Due to a mandatory test protocol, we will stop taking transforms in constructors in 3, 2, 1.
@@ -278,11 +290,18 @@ public abstract class Thing implements Serializable {
 			}
 		}
 	}
-	public void interact() {
-		this.interacted=false;
-		for(LocalRayResult l : rayTest) {
-			if(((RigidBody)l.collisionObject).equals(this.geo.p.body)) {
-				this.interacted=true;
+	public final void interact() {
+		if(this.geo==null) {return;}
+		if(this.geo.p==null) {return;}
+		this.interacted=rayTest.contains(this.geo.p.body); //Very fast, constant check time complexity, I think?
+		if(in==null) {
+			in=new InputHandler(GLContextInitializer.win);
+		}
+		if(Main.isDesigner && PlayerInitializer.player.isInGodMode() && !Main.inDesignerCycle) {
+			if(interacted) {
+				if(in.mr(GLFW_MOUSE_BUTTON_LEFT)) {
+					LevelDesigner.setSelected(this);
+				}
 			}
 		}
 		this.processInteraction();
@@ -361,9 +380,14 @@ public abstract class Thing implements Serializable {
 		return IdFieldAssoc;
 	}
 
-	//SerializeByID
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.FIELD)
-	public @interface SerializeByID {
+	public static @interface SerializeByID {
+	}
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target(ElementType.METHOD)
+	public static @interface DesignerParameter {
+		public String name() default "Error";
+		public String desc() default "No data provided.";
 	}
 }

@@ -20,7 +20,7 @@ public class Commands {
 		public String desc() default "No description provided.";
 	}
 	private static void print(String s) {
-		if(Logger.handlers.getInternalArrayList().contains(Main.consoleWindowHandler)) {
+		if(Logger.handlers.contains(Main.consoleWindowHandler)) {
 			Logger.log(0,s);
 		} else {
 			Main.jythonConsoleHandler.println(s);
@@ -30,7 +30,7 @@ public class Commands {
 	public static void requestClose() {
 		glfwSetWindowShouldClose(win,true);
 	}
-	@Command(desc="Force close everything by running cleanup tasks while main loop is active. Will likely lead to runtime errors.")
+	@Command(desc="Force close everything by running cleanup tasks while main loop is active. Will likely lead to errors.")
 	public static void forceTerminate() {
 		glfwSetWindowShouldClose(win,true);
 		CleanupTasks.cleanUp();
@@ -38,13 +38,13 @@ public class Commands {
 	@Command(desc="Unhook the logger output from the console window.")
 	public static void unhookConsoleHandler() {
 		print("Unhooking logger console handler...");
-		if(Logger.handlers.getInternalArrayList().contains(Main.consoleWindowHandler)) {
+		if(Logger.handlers.contains(Main.consoleWindowHandler)) {
 			Logger.handlers.remove(Main.consoleWindowHandler);
 		}
 	}
 	@Command(desc="If not already hooked, hook the logger output to the console window.")
 	public static void hookConsoleHandler() {
-		if(!Logger.handlers.getInternalArrayList().contains(Main.consoleWindowHandler)) {
+		if(!Logger.handlers.contains(Main.consoleWindowHandler)) {
 			Logger.handlers.add(Main.consoleWindowHandler);
 		}
 		print("Logger console handler re-hooked");

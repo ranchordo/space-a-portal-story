@@ -1,17 +1,26 @@
 package graphics2d.things;
 
+import static org.lwjgl.glfw.GLFW.*;
+
 import java.util.ArrayList;
 
+import javax.vecmath.Vector2d;
 import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
 
+import game.Main;
 import graphics2d.util.InstancedRenderer2d;
 import lepton.engine.rendering.GLContextInitializer;
 import lepton.engine.rendering.GObject;
 import lepton.engine.rendering.Tri;
+import lepton.util.InputHandler;
 
 public abstract class Thing2d {
+	@FunctionalInterface
+	public static interface EventListener {
+		public void onEvent();
+	}
 	public static enum PosMode {
 		CENTER, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
 	}
@@ -82,14 +91,64 @@ public abstract class Thing2d {
 	public void init() {
 		
 	}
-	public void add() {
-		
-	}
+//	public void add() {
+//		
+//	}
 	public void logic() {
 		
 	}
 	public void render() {
 		
+	}
+	public EventListener mouseOn=null;
+	public EventListener mouseOff=null;
+	public EventListener mouseClick=null;
+	public EventListener mouseClickRight=null;
+	public EventListener mouseClickMiddle=null;
+	private byte isMouseOn=-1;
+	public byte isMouseOn() {
+		return isMouseOn;
+	}
+	private boolean prevMouseSetting=false;
+	private InputHandler in=null;
+	private void runEventListener(EventListener el) {
+		if(el!=null) {el.onEvent();}
+	}
+	public void runEventListeners() {
+		if(in==null) {
+			in=new InputHandler(GLContextInitializer.win);
+		}
+		if(mouseOn!=null || mouseOff!=null || mouseClick!=null || mouseClickRight!=null || mouseClickMiddle!=null) {
+			if(glfwGetInputMode(GLContextInitializer.win,GLFW_CURSOR)==GLFW_CURSOR_NORMAL) {
+				Vector2d mp=Main.in.mp();
+				Vector4f bb=getBoundingBox();
+				mp.x=2*(mp.x/GLContextInitializer.winW)-1;
+				mp.y=2*(1-(mp.y/GLContextInitializer.winH))-1;
+				if(((mp.x>=bb.x && mp.x<=bb.z)||(mp.x<=bb.x && mp.x>=bb.z)) && ((mp.y>=bb.y && mp.y<=bb.w)||(mp.y<=bb.y && mp.y>=bb.w))) {
+					if(!prevMouseSetting) {
+						runEventListener(mouseOn);
+						isMouseOn=1;
+						prevMouseSetting=true;
+					}
+					if(in.mr(GLFW_MOUSE_BUTTON_LEFT)) {
+						runEventListener(mouseClick);
+					}
+					if(in.mr(GLFW_MOUSE_BUTTON_RIGHT)) {
+						runEventListener(mouseClickRight);
+					}
+					if(in.mr(GLFW_MOUSE_BUTTON_MIDDLE)) {
+						runEventListener(mouseClickMiddle);
+					}
+				} else {
+					if(prevMouseSetting) {
+						runEventListener(mouseOff);
+						isMouseOn=0;
+						prevMouseSetting=false;
+					}
+				}
+			}
+			
+		}
 	}
 	public final Thing2d initThis() {
 		this.init();

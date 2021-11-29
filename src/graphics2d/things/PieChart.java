@@ -17,7 +17,7 @@ public class PieChart extends Thing2d {
 	public Group2d group=new Group2d();
 	public float[] data=null;
 	public Vector3f[] rgbs=null;
-	public float width=0.1f;
+	public float width=0.4f;
 	private InstanceAccumulator ia;
 	public PieChart(int elements, float nx, float ny, float nw, InstancedRenderer2d sl) {
 		if(pieChartShader==null) {
@@ -35,13 +35,14 @@ public class PieChart extends Thing2d {
 		for(int i=0;i<data.length;i++) {
 			data[i]=1;
 			GenericInstancedThing2d r=new GenericInstancedThing2d(ia);
-			r.renderingShader=pieChartShader;
+//			r.renderingShader=pieChartShader;
 			r.objectSize=GenericInstancedThing2d.defaultObjectSize+8;
 			tog=!tog;
 			int c=Color.HSBtoRGB(i*(1.0f/data.length),tog?1:0.90f,tog?0.3f:1);
 			rgbs[i]=new Vector3f(((c>>0)&0xFF)/255.0f,((c>>8)&0xFF)/255.0f,((c>>16)&0xFF)/255.0f);
 			r.setParent(parent);
-			System.out.println(rgbs[i]);
+			r.setPosMode(posMode);
+			//System.out.println(rgbs[i]);
 			group.add(r);
 		}
 		group.init();
@@ -55,6 +56,7 @@ public class PieChart extends Thing2d {
 			gthing.height=width;
 		}
 		group.logic();
+		runEventListeners(); //For event debugging
 	}
 	@Override
 	public void render() {

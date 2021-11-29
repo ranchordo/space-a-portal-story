@@ -2,15 +2,16 @@
 #define pi 3.1415926535897932384
 #define MAX_LIGHTS 50
 
-//struct Info {
-//	mat4 obj2world;
-//	vec4 shapeinfo;
-//	vec4 texinfo;
-//};
+struct Info {
+	mat4 obj2world;
+	vec4 scaleinfo;
+	vec4 texinfo;
+	mat4 viewmatrix;
+};
 
-//layout (std140) buffer info_buffer {
-//	Info infos[];
-//};
+layout (std140) buffer info_buffer {
+	Info infos[];
+};
 
 uniform mat4 world2view=mat4(1.0);
 uniform mat4 proj_matrix=mat4(1.0);
@@ -34,25 +35,26 @@ varying mat3 TBN;
 varying vec4 material_v;
 varying vec3 campos;
 void main() {
-	//Info info=infos[gl_InstanceID];
-	mat4 master_matrix=mat4(1);//info.obj2world;
+	Info info=infos[gl_InstanceID];
+	mat4 master_matrix=info.obj2world;
+	mat4 view=world2view*info.viewmatrix;
 	material_v=material;
 	if(material.y<=0) {
 		material_v.y=1.0f;
 	}
 	float altValue=0.15;
-	campos=(inverse(world2view)[3]).xyz;
-	mat4 mvp=proj_matrix*world2view*master_matrix;
-	gl_Position=mvp*vec4(glv,1.0);//*info.shapeinfo.xyz,1.0);
-	texCoords=mtc0.st;//(mtc0.st*info.texinfo.zw)+info.texinfo.xy;
+	campos=(inverse(view)[3]).xyz;
+	mat4 mvp=proj_matrix*view*master_matrix;
+	gl_Position=mvp*vec4(glv*info.scaleinfo.xyz,1.0);
+	texCoords=(mtc0.st*info.texinfo.zw)+info.texinfo.xy;
 	mat3 view_matrix=mat3(master_matrix);
 	normal_orig=normalize(view_matrix*gln);
 	vec3 tan_world=normalize(view_matrix*tangent);
 	vec3 bit_world=normalize(view_matrix*bitangent);
 	TBN=mat3(tan_world,bit_world,normal_orig);
 	intensity=vec4(0,0,0,1);
-	world_position=1.0*((master_matrix*vec4(glv,1.0)).xyz);
-	view_position=(world2view*vec4(1.0*((master_matrix*vec4(glv,1.0)).xyz),1.0)).xyz;
+	world_position=(master_matrix*vec4(glv*info.scaleinfo.xyz,1.0)).xyz;
+	view_position=(view*vec4(1.0*((master_matrix*vec4(glv,1.0)).xyz),1.0)).xyz;
 	if(useLighting<1) {
 		intensity=vec4(altValue,altValue,altValue,1);
 	}

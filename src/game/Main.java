@@ -1,14 +1,12 @@
 package game;
 
-import static lepton.engine.rendering.GLContextInitializer.doCursor;
-import static lepton.engine.rendering.GLContextInitializer.fr;
-import static lepton.engine.rendering.GLContextInitializer.win;
+import static lepton.engine.rendering.GLContextInitializer.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
 
-import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Random;
 
 import javax.vecmath.AxisAngle4f;
 import javax.vecmath.Vector2f;
@@ -27,7 +25,6 @@ import graphics.InstancedRenderer3d;
 import graphics.InstancedRenderer3d.InstancedRenderRoutine3d;
 import graphics.RenderFeeder;
 import graphics.ShaderLoader;
-import graphics2d.presets.DebugScreen;
 import graphics2d.things.Thing2d;
 import graphics2d.util.Fonts;
 import lepton.cpshlib.ComputeShader;
@@ -35,7 +32,7 @@ import lepton.engine.audio.Audio;
 import lepton.engine.physics.PhysicsWorld;
 import lepton.engine.rendering.FrameBuffer;
 import lepton.engine.rendering.GLContextInitializer;
-import lepton.engine.rendering.GObject;
+import lepton.engine.rendering.InstanceAccumulator;
 import lepton.engine.rendering.Screen;
 import lepton.engine.rendering.Shader;
 import lepton.engine.rendering.TextureCache;
@@ -50,6 +47,7 @@ import lepton.util.advancedLogger.LogHandler;
 import lepton.util.advancedLogger.LogLevel;
 import lepton.util.advancedLogger.Logger;
 import lepton.util.console.ConsoleWindow;
+import leveldesigner.LevelDesigner;
 import objects.LightingConfiguration;
 import objects.Player;
 import objects.PortalPair;
@@ -65,7 +63,12 @@ public class Main {
 	public static final float volume=1.0f;
 	public static final boolean isDesigner=true;
 	public static void main(String[] args) {
-		MainLoop();
+		try {
+			MainLoop();
+		} catch (Exception e) {
+			e.printStackTrace();
+			Logger.log(4,e.toString(),e);
+		}
 	}
 	
 //	public static final int COMPUTE_SHADER=0x87;
@@ -101,6 +104,8 @@ public class Main {
 	public static SaveState scheduledReplacement=null;
 	public static InputHandler in;
 	
+	public static boolean inDesignerCycle=false;
+	
 	public static JythonConsoleManager jythonConsoleHandler;
 	public static LogHandler consoleWindowHandler;
 	public static void renderRoutine(Thing thing, int portal) {
@@ -122,15 +127,21 @@ public class Main {
 		for(Thing thing : things) { //Transparent render step
 			alphaRenderRoutine(thing,0);
 		}
+		PlayerInitializer.player.portalPair.apply();
+		timeProfiler.stop(3);
+		timeProfiler.start(9);
 	}
 	public static MemoryStack stack;
 	public static PhysicsWorld physics;
 	public static LinkedPhysicsWorld portalWorld;
 	public static PhysicsWorld dbgRenderWorld=null;
-	public static TimeProfiler timeProfiler=new TimeProfiler("Physics","Thing logic","Portal graphics","Main render","Debug","Misc","Post-render","SwapBuffers","2D render");
+	public static TimeProfiler timeProfiler=new TimeProfiler("Physics","Thing logic","Portal graphics","Main render","Debug","Misc","Post-render","SwapBuffers","2D render","Main render - instGPU");
 	public static Fonts fonts=new Fonts();
 	public static ShaderLoader shaderLoader=new ShaderLoader();
 	public static InstancedRenderer3d instancedRenderer=new InstancedRenderer3d();
+	public static boolean randomClear=false;
+	public static Random mainRandom=new Random();
+	public static long frameCount=0;
 	public static InstancedRenderRoutine3d mainRenderRoutine=new InstancedRenderRoutine3d() {
 		@Override public void run() {
 			Main.mainRenderRoutine();
@@ -166,6 +177,9 @@ public class Main {
 		portalPhysicsStepModifier.setPhysicsWorld(portalWorld.getWorld2());
 		
 		Thing.defaultPhysicsWorld=physics;
+		
+//		InstanceAccumulator.runAggressiveChangeCheckDefault=true;
+		InstanceAccumulator.mergeSSBOsOnDuplicate=InstanceAccumulator.NO_MERGE;
 				
 		ConsoleWindow mainConsoleWindow=new ConsoleWindow(false,800,600,"Space: A Portal Story - Debug console",(s)->Main.jythonConsoleHandler.recv(s),"Debug console ready.\nStarting the game shortly...");
 		mainConsoleWindow.setVisible(true);
@@ -183,6 +197,12 @@ public class Main {
 		((CollisionDispatcher)portalWorld.getWorld2().dynamicsWorld.getDispatcher()).setNearCallback(new PortalNearCallback());
 		
 		GLContextInitializer.initializeGLContext(true,864,486,false,"Space - A Portal Story");
+		
+		String[] extensions=glGetString(GL_EXTENSIONS).split(" ");
+		for(String s : extensions) {
+			Logger.log(0,"Found GL extension: "+s);
+		}
+		
 		LeptonUtil.locationReference=Main.class;
 		activeWindow=win;
 		
@@ -244,13 +264,14 @@ public class Main {
 		//PUT CHAMBER CONTENTS HERE:
 		//hld=test.add(new Door(new Vector3f(9.7f,0.2f,5),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),false));
 		//test.add(new FaithPlate(new Vector3f(4,0.04f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),new Vector3f(0,20,0)));
-		test.add(new Wall(new Vector2f(50,10), new Vector3f(0,0,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-//		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), LeptonUtil.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))));
-		//test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
+
+		test.add(new Wall(new Vector2f(50,10), new Vector3f(0,0,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2).setSideMode(Wall.DOUBLE));
+		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
+		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), LeptonUtil.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))).setSideMode(Wall.DOUBLE));
+//		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
 		//((Door)hld).setAttached(test.add(new Wall(new Vector2f(10,10), new Vector3f(10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90))))));
 		//test.add(new Fizzler(new Vector2f(2,2), new Vector3f(5,2,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90)))));
-		//test.add(new Wall(new Vector2f(10,10), new Vector3f(-10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(270)))));
+//		test.add(new Wall(new Vector2f(30,10), new Vector3f(-10,10,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(270)))));
 		//test.add(new PortableWall(new Vector3f(0,6,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40)))));
 //		test.add(new Cube(new Vector3f(0,5,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),Cube.NORMAL));
 		//test.add(new ParticleThing(new ParticleEmitter(new Vector3f(0,2,0),0.0f,new Vector3f(-1,-1,-1),200,new Vector3f(2,2,2))));
@@ -306,7 +327,7 @@ public class Main {
 		gamma=1.0f;
 		doCursor(win,true,true);
 		glfwSwapInterval(1);
-		//activeAtlas.atlas_tex.bind();
+//		activeAtlas.atlas_tex.bind();
 		
 		PlayerInitializer.player=PlayerInitializer.initializePlayer();
 		GLContextInitializer.cameraTransform=new Transform();
@@ -334,7 +355,6 @@ public class Main {
 				portalWorld.step_linked();
 			}
 			
-			Movement.movement();
 			Thing.runRayTest(physics);
 			timeProfiler.stop(0);
 			
@@ -342,7 +362,11 @@ public class Main {
 			fbo.bind();
 			glEnable(GL_DEPTH_TEST);
 			glStencilMask(0xFF);
-			glClearColor(0,0,0,1);
+			if(!randomClear) {
+				glClearColor(0,0,0,1);
+			} else {
+				glClearColor(mainRandom.nextInt(1000)/1000.0f,mainRandom.nextInt(1000)/1000.0f,mainRandom.nextInt(1000)/1000.0f,1);
+			}
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			glPushMatrix();
 			GLContextInitializer.cameraTransform.set(camera.getInvTransform());
@@ -373,13 +397,13 @@ public class Main {
 			timeProfiler.stop(1);
 			
 			timeProfiler.start(2);
-			pp.apply();
+			//Portal graphics would go here
 			timeProfiler.stop(2);
 			timeProfiler.start(3);
 			instancedRenderer.renderInstanced(mainRenderRoutine);
 			glStencilFunc(GL_ALWAYS,128,0xFF);
 			glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
-			timeProfiler.stop(3);
+			timeProfiler.stop(9);
 			timeProfiler.start(8);
 			for(Thing2d i : displays) {
 				i.render();
@@ -387,6 +411,9 @@ public class Main {
 			timeProfiler.stop(8);
 			timeProfiler.start(4);
 			MainExt.renderDBGWorld();
+			if(Main.isDesigner) {
+				LevelDesigner.onFrame();
+			}
 			timeProfiler.stop(4);
 			timeProfiler.start(6);
 			fbo.blitTo(interfbo,0,0);
@@ -461,6 +488,7 @@ public class Main {
 			GLContextInitializer.timeCalcEnd();
 			timeProfiler.stop(5);
 			timeProfiler.submit();
+			frameCount++;
 		}
 		CleanupTasks.cleanUp();
 	}

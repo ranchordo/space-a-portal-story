@@ -2,17 +2,16 @@ package debug;
 
 import java.util.ArrayList;
 
-import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 
+import game.Main;
 import lepton.engine.rendering.GObject;
 import lepton.engine.rendering.Tri;
 
 public class GenericCubeFactory {
 	private static final Vector3f shape=new Vector3f(1f,1f,1f);
 	public static GObject createGenericCube() {
-		GObject geo;
-		geo=new GObject();
+		GObject geo=new GObject();
 		geo.useTex=false;
 //		geo.useCulling=false;
 		geo.useLighting=false;
@@ -57,6 +56,7 @@ public class GenericCubeFactory {
 		
 		geo.initVBO();
 		geo.refresh();
+		geo.setRenderingShader(Main.shaderLoader.load("plainShader"));
 		return geo;
 	}
 }

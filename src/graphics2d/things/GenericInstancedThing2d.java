@@ -12,7 +12,7 @@ public class GenericInstancedThing2d extends Thing2d {
 	public static final int defaultObjectSize=8;
 	public float width;
 	public float height;
-	public Shader renderingShader=Main.shaderLoader.load("genericThing2d");
+//	public Shader renderingShader=Main.shaderLoader.load("genericThing2d");
 	public float texX=0;
 	public float texY=0;
 	public float texW=1;
@@ -54,10 +54,29 @@ public class GenericInstancedThing2d extends Thing2d {
 		}
 		ia.add(data);
 	}
+	@Override public void logic() {
+		runEventListeners();
+	}
 	private Vector4f a=new Vector4f();
 	@Override
 	public Vector4f getBoundingBox() {
-		a.set(x,y,width+x,height+y);
+		switch(posMode) {
+		case TOP_RIGHT:
+			a.set(x-width,y-(height*GLContextInitializer.aspectRatio),x,y);
+			break;
+		case TOP_LEFT:
+			a.set(x,y-(height*GLContextInitializer.aspectRatio),x+width,y);
+			break;
+		case BOTTOM_RIGHT:
+			a.set(x-width,y,x,y+(height*GLContextInitializer.aspectRatio));
+			break;
+		case BOTTOM_LEFT:
+			a.set(x,y,x+width,y+(height*GLContextInitializer.aspectRatio));
+			break;
+		case CENTER:
+			a.set(x-(width*0.5f),y-((height*GLContextInitializer.aspectRatio)*0.5f),x+(width*0.5f),y+((height*GLContextInitializer.aspectRatio)*0.5f));
+			break;
+		}
 		return a;
 	}
 	@Override

@@ -31,12 +31,12 @@ public class PortalNearCallback extends NearCallback {
 	private static final float EPSILON=PortalPair.WALL_DISTANCE*2f;
 	public static boolean removeContactPoint(Vector3f a, Vector3f b, RigidBody b1, RigidBody b2) {
 		PortalPair pp=PlayerInitializer.player.portalPair;
-		float r1=Util.distance(pp.p1.origin,a);
-		float r2=Util.distance(pp.p2.origin,a);
+		float r1=Util.distance(pp.p1().origin,a);
+		float r2=Util.distance(pp.p2().origin,a);
 		if(r1>pp.getShape().length()+2.0f && r2>pp.getShape().length()+2.0f) {
 			return false;
 		}
-		int rayTest=(pp.rayTest(pp.p1,a,1,-1)?1:0)+(pp.rayTest(pp.p2,a,1,-1)?2:0);
+		int rayTest=(pp.rayTest(pp.p1(),a,1,-1)?1:0)+(pp.rayTest(pp.p2(),a,1,-1)?2:0);
 		if(rayTest!=0) {
 			return true;
 		}
@@ -47,8 +47,8 @@ public class PortalNearCallback extends NearCallback {
 			return false;
 		}
 		boolean otherWorld=otherWorld1==null?otherWorld2:otherWorld1;
-		a.sub(pp.p1.origin);
-		b.sub(pp.p1.origin);
+		a.sub(pp.p1().origin);
+		b.sub(pp.p1().origin);
 		float dotA=pp.normal1.dot(a);
 		float dotB=pp.normal1.dot(b);
 		if((dotA>EPSILON || dotB>EPSILON) && otherWorld) {
