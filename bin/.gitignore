@@ -1,5 +1,10 @@
-/compute_shaders/
-/shaders/
-/objects/
+/console/
+/debug/
 /game/
+/graphics/
+/graphics2d/
 /leveldesigner/
+/objects/
+/physics/
+/portalcasting/
+/util/
