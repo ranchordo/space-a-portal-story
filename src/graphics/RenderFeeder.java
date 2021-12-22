@@ -1,9 +1,10 @@
 package graphics;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 
 import game.Chamber;
 import game.Main;
+import lepton.util.advancedLogger.Logger;
 import objects.Thing;
 
 public class RenderFeeder {
@@ -12,21 +13,21 @@ public class RenderFeeder {
 		Main.activeChamber.add(thing);
 	}
 	public static void feed(Chamber chamber) {
-//		HashSet<Thing> toremove=new HashSet<Thing>();
-//		for(Thing t : Main.things) {
-//			if(t.exemptFromChamberFeed) {
-//				toremove.add(t);
-//			}
-//		}
+		ArrayList<Thing> toRemove=new ArrayList<Thing>();
+		for(Thing t : Main.things) {
+			if(!t.exemptFromChamberFeed) {
+				t.clean();
+				toRemove.add(t);
+			}
+		}
+		for(Thing t : toRemove) {
+			if(!Main.things.remove(t)) {
+				Logger.log(3,"RenderFeeder.feed: Failed to remove object with type "+t.type);
+			}
+		}
 		for(Thing t : chamber.stuff) {
 			Main.things.add(t);
-			if(t.geo==null) {continue;}
-			if(t.geo.g==null) {continue;}
-			if(t.geo.g.vmap==null) {continue;}
-			if(t.geo.g.vmap.tex==null) {continue;}
-//			if(!t.geo.g.vmap.tex.name.equals("")) {continue;}
-			Main.activeCache.cache.add(t.geo.g.vmap.tex);
 		}
+		Main.activeChamber=chamber;
 	}
-	
 }

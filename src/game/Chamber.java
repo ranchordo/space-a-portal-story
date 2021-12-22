@@ -124,6 +124,11 @@ public class Chamber implements Serializable {
 		this.stuff.add(toAdd);
 		return toAdd;
 	}
+	public static boolean fileExists(String fname) {
+		String complete_fname=LeptonUtil.getExternalPath()+"/assets/chambers/"+fname+".chmb";
+		File f=new File(complete_fname);
+		return f.exists();
+	}
 	public static Chamber input(String fname) {
 		Lighting.clear();
 		String complete_fname=LeptonUtil.getExternalPath()+"/assets/chambers/"+fname+".chmb";

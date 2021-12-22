@@ -264,6 +264,7 @@ public class PortalPair extends Thing {
 		p1=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))),new Vector3f(0,19,9.85f),1.0f));
 		p2=new Transform(new Matrix4f(LeptonUtil.noPool(LeptonUtil.AxisAngle(new AxisAngle4f(0,1,0,(float)Math.toRadians(180)))),new Vector3f(0,19,-9.85f),1.0f));
 		updateDifferences();
+		this.exemptFromChamberFeed=true;
 	}
 	public void onPlacement(int portal) {
 //		if(Main.portalWorld.getWorld2().getBodies().size()>0) {

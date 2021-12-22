@@ -1,13 +1,10 @@
 package objects;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.vecmath.AxisAngle4f;
 import javax.vecmath.Matrix4f;
 import javax.vecmath.Quat4f;
-import javax.vecmath.Tuple3f;
-import javax.vecmath.Tuple4f;
 import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 
@@ -61,72 +58,100 @@ public class Wall extends Thing {
 		origin=new Vector3f(0,0,0);
 		quat=new Quat4f(1,0,0,0);
 	}
+	Float[] paramret=new Float[4];
 	@Thing.DesignerParameter(name="Shape",desc="XYZ scale of the wall. Applied after rotation.")
-	public void setShape(Float f0, Float f1, Float f2) {
-		this.shape.set(f0,f1,f2);
-		this.geo.p.removePhysics(physicsWorld);
-		this.initPhysics();
-		this.addPhysics();
+	public Float[] setShape(Float f0, Float f1, Float f2, Boolean set) {
+		if(set) {
+			this.shape.set(f0,f1,f2);
+			this.geo.p.removePhysics(physicsWorld);
+			this.initPhysics();
+			this.addPhysics();
+		}
+		paramret[0]=shape.x; paramret[1]=shape.y; paramret[2]=shape.z;
+		return paramret;
 	}
 	@Thing.DesignerParameter(name="Origin",desc="Position of the center of the wall in 3d space.")
-	public void setOrigin(Float f0, Float f1, Float f2) {
-		if(this.origin==null) {
-			this.origin=new Vector3f(f0,f1,f2);
-		} else {
-			this.origin.set(f0,f1,f2);
+	public Float[] setOrigin(Float f0, Float f1, Float f2, Boolean set) {
+		if(set) {
+			if(this.origin==null) {
+				this.origin=new Vector3f(f0,f1,f2);
+			} else {
+				this.origin.set(f0,f1,f2);
+			}
+			PoolElement<Matrix4f> pe1=DefaultVecmathPools.matrix4f.alloc();
+			PoolElement<Transform> pe2=DefaultVecmathPools.transform.alloc();
+			this.geo.p.body.getWorldTransform(pe2.o()).getMatrix(pe1.o());
+			pe1.o().set(quat,origin,1);
+			pe2.o().set(pe1.o());
+			this.geo.p.body.setWorldTransform(pe2.o());
+			pe2.free();
+			pe1.free();
 		}
-		PoolElement<Matrix4f> pe1=DefaultVecmathPools.matrix4f.alloc();
-		PoolElement<Transform> pe2=DefaultVecmathPools.transform.alloc();
-		this.geo.p.body.getWorldTransform(pe2.o()).getMatrix(pe1.o());
-		pe1.o().set(quat,origin,1);
-		pe2.o().set(pe1.o());
-		this.geo.p.body.setWorldTransform(pe2.o());
-		pe2.free();
-		pe1.free();
+		paramret[0]=this.geo.p.getTransform().origin.x;
+		paramret[1]=this.geo.p.getTransform().origin.y;
+		paramret[2]=this.geo.p.getTransform().origin.z;
+		return paramret;
 	}
 	private AxisAngle4f axisAngle=null;
 	@Thing.DesignerParameter(name="Rotation",desc="Rotation of the wall in 3d space. Conforms to vecmath.AxisAngle4f specifications. X, Y, Z, THETA. Also refreshes origin.")
-	public void setRotation(Float f0, Float f1, Float f2, Float f3) {
-		if(axisAngle==null) {
-			axisAngle=new AxisAngle4f(f0,f1,f2,f3);
-		} else {
-			axisAngle.set(f0,f1,f2,f3);
+	public Float[] setRotation(Float f0, Float f1, Float f2, Float f3, Boolean set) {
+		if(set) {
+			if(axisAngle==null) {
+				axisAngle=new AxisAngle4f(f0,f1,f2,(float)Math.toRadians(f3*90f));
+			} else {
+				axisAngle.set(f0,f1,f2,(float)Math.toRadians(f3*90f));
+			}
+			PoolElement<Quat4f> peq=LeptonUtil.AxisAngle(axisAngle);
+			this.quat.set(peq.o());
+			peq.free();
+			setOrigin(this.origin.x,this.origin.y,this.origin.z,true); //Refresh stuff
 		}
-		PoolElement<Quat4f> peq=LeptonUtil.AxisAngle(axisAngle);
-		this.quat.set(peq.o());
-		peq.free();
-		setOrigin(this.origin.x,this.origin.y,this.origin.z); //Refresh stuff
+		if(axisAngle==null) {
+			PoolElement<Quat4f> peq=DefaultVecmathPools.quat4f.alloc();
+			this.geo.p.getTransform().getRotation(peq.o());
+			axisAngle=LeptonUtil.noPool(LeptonUtil.Quat(peq.o()));
+			peq.free();
+		}
+		paramret[0]=axisAngle.x; paramret[1]=axisAngle.y; paramret[2]=axisAngle.z; paramret[3]=(float)Math.toDegrees(axisAngle.angle)/90.0f;
+		return paramret;
 	}
 	@Thing.DesignerParameter(name="Type",desc="Also controls portalability. Will round to nearest integer. Range limited.")
-	public void setTextureTypeWRefresh(Float tt) {
-		textureType=Math.round(tt);
-		textureType=Math.max(textureType,0);
-		textureType=Math.min(textureType,textures.length);
-		initTexture();
+	public Float[] setTextureTypeWRefresh(Float tt, Boolean set) {
+		if(set) {
+			textureType=Math.round(tt);
+			textureType=Math.max(textureType,0);
+			textureType=Math.min(textureType,textures.length);
+			initTexture();
+		}
+		paramret[0]=(float)textureType;
+		return paramret;
 	}
 	@Thing.DesignerParameter(name="Aspect",desc="Aspect ratio of texture.")
-	public Wall setAspectWRefresh(Float f0, Float f1) {
-		aspect.set(f0,f1);
-		return this;
+	public Float[] setAspectWRefresh(Float f0, Float f1, Boolean set) {
+		if(set) {aspect.set(f0,f1);}
+		paramret[0]=aspect.x; paramret[1]=aspect.y;
+		return paramret;
 	}
 	@Thing.DesignerParameter(name="Tex off",desc="Offset of texture on wall.")
-	public Wall setTextureOffsetWRefresh(Float f0, Float f1) {
-		texOffset.set(f0,f1);
-		return this;
+	public Float[] setTextureOffsetWRefresh(Float f0, Float f1, Boolean set) {
+		if(set) {texOffset.set(f0,f1);}
+		paramret[0]=texOffset.x; paramret[1]=texOffset.y;
+		return paramret;
 	}
 	@Thing.DesignerParameter(name="Side mode",desc="0=One side, 1=Two sides, 2=All sides. Range limited. Will round to nearest integer.")
-	public Wall setSideModeWRefresh(Float in) {
-		sided=Math.round(in);
-		sided=Math.max(sided,SINGLE);
-		sided=Math.min(sided,ALL);
-//		this.geo.g.vmap.tex.delete();
-//		this.geo.g.clean();
-		initGeo();
-//		this.geo.g.initVBO();
-		this.geo.g.unlock();
-		this.geo.g.refresh();
-		this.geo.g.lock();
-		return this;
+	public Float[] setSideModeWRefresh(Float in, Boolean set) {
+		if(set) {
+			sided=Math.round(in);
+			sided=Math.max(sided,SINGLE);
+			sided=Math.min(sided,ALL);
+			this.geo.g.unlock();
+			initGeo();
+			this.geo.g.unlock();
+			this.geo.g.refresh();
+			this.geo.g.lock();
+		}
+		paramret[0]=(float)sided;
+		return paramret;
 	}
 	public Wall setTextureType(int tt) {
 		textureType=tt;
@@ -207,9 +232,8 @@ public class Wall extends Thing {
 		try {
 			this.geo.g.loadTexture("assets/"+textures[textureType],"jpg");
 			if(textureType==2) {
-				this.geo.g.vmap.tex=new Texture(this.geo.g.vmap.tex);
 				this.geo.g.vmap.tex.reset(Texture.NORMAL);
-				this.geo.g.vmap.tex.create(1,"assets/3d/wall/cropped_border_normal_detail",".jpg");
+				this.geo.g.vmap.tex.create(Texture.NORMAL,"assets/3d/wall/cropped_border_normal_detail",".jpg");
 			}
 		} catch (IOException e) {
 			Logger.log(4,e.toString(),e);
@@ -219,7 +243,6 @@ public class Wall extends Thing {
 	public void initGeo() {
 		if(this.geo==null) {this.geo=new WorldObject();}
 		if(this.geo.g==null) {this.geo.g=new GObject();}
-		this.geo.g.unlock();
 		this.geo.g.useTex=true;
 		this.geo.g.vmap.vertices=new ArrayList<Vector3f>();
 		this.geo.g.vmap.vertices.add(new Vector3f(-1,-1,-1));

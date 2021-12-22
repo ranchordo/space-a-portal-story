@@ -5,9 +5,9 @@ import java.util.HashMap;
 
 import game.DisplayManager.DisplayEntry;
 import graphics2d.presets.DebugScreen;
-import graphics2d.presets.DesignerInsertMenu;
 import graphics2d.things.Thing2d;
 import lepton.util.advancedLogger.Logger;
+import leveldesigner.DesignerInsertMenu;
 
 public class DisplayManager {
 	public static class DisplayEntry {

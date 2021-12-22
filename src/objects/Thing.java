@@ -92,7 +92,7 @@ public abstract class Thing implements Serializable {
 	protected static HashSet<RigidBody> rayTest=new HashSet<RigidBody>();
 	public boolean isScaleNormalized=false;
 	
-	protected InputHandler in;
+	protected transient InputHandler in;
 	
 	protected boolean funnelPrevUseGravity=true;
 	public boolean funnelInFunnel=false;
@@ -203,8 +203,10 @@ public abstract class Thing implements Serializable {
 	
 	public void initGObject(WorldObject geo2) {
 		if(geo2==null) {return;}
-		if(geo2!=geo) {
+		if(!gobjects.contains(geo2)) {
 			gobjects.add(geo2);
+		} else {
+			Logger.log(2,"Duplicate GObject initialization requested for Thing "+type+". Ignoring.");
 		}
 
 		if(geo2.g==null) {return;}
@@ -294,9 +296,6 @@ public abstract class Thing implements Serializable {
 		if(this.geo==null) {return;}
 		if(this.geo.p==null) {return;}
 		this.interacted=rayTest.contains(this.geo.p.body); //Very fast, constant check time complexity, I think?
-		if(in==null) {
-			in=new InputHandler(GLContextInitializer.win);
-		}
 		if(Main.isDesigner && PlayerInitializer.player.isInGodMode() && !Main.inDesignerCycle) {
 			if(interacted) {
 				if(in.mr(GLFW_MOUSE_BUTTON_LEFT)) {
@@ -310,6 +309,9 @@ public abstract class Thing implements Serializable {
 	public final void init() {
 		if(this.geo!=null) {
 			prevPos=geo.p.getTransform().origin;
+		}
+		if(in==null) {
+			in=new InputHandler(GLContextInitializer.win);
 		}
 		gobjects=new ArrayList<WorldObject>();
 		collisions=new ArrayList<Thing>();
@@ -329,12 +331,16 @@ public abstract class Thing implements Serializable {
 		refreshGravity();
 	}
 	public final void clean() {
+		Logger.log(0,"Cleaning a "+type);
 		sourcePool.free();
 		sourcePool.die();
 		for(WorldObject g : gobjects) {
+			g.g.vmap.tex.delete();
 			g.g.clean();
-			if(g.p.body!=null) {
-				physicsWorld.remove(g.p.body);
+			if(g.p!=null) {
+				if(g.p.body!=null) {
+					physicsWorld.remove(g.p.body);
+				}
 			}
 		}
 	}
@@ -379,7 +385,6 @@ public abstract class Thing implements Serializable {
 	public HashMap<String,Integer> getIdFieldAssoc() {
 		return IdFieldAssoc;
 	}
-
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.FIELD)
 	public static @interface SerializeByID {
@@ -387,7 +392,7 @@ public abstract class Thing implements Serializable {
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
 	public static @interface DesignerParameter {
-		public String name() default "Error";
+		public String name();
 		public String desc() default "No data provided.";
 	}
 }

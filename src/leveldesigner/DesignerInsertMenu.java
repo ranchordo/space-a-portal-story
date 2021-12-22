@@ -1,4 +1,4 @@
-package graphics2d.presets;
+package leveldesigner;
 
 import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
 import static org.lwjgl.opengl.GL11.glDisable;
@@ -16,8 +16,6 @@ import graphics2d.things.Thing2d;
 import graphics2d.util.InstancedRenderer2d;
 import lepton.engine.rendering.GLContextInitializer;
 import lepton.util.advancedLogger.Logger;
-import leveldesigner.InsertableObjectDescriptor;
-import leveldesigner.LevelDesigner;
 
 public class DesignerInsertMenu extends Thing2d {
 	private Group2d group=new Group2d();
@@ -64,30 +62,50 @@ public class DesignerInsertMenu extends Thing2d {
 				}};
 			}
 		}
+		Thing2d e=group.add(new TextGroup("Duplicate",Main.fonts.get("consolas"),-0.84f,-0.4f,0.05f,0.0f,0.5f,0.5f,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.CENTER).initThis());
+		e.mouseClick=()->{LevelDesigner.insertables.get(LevelDesigner.getSelected().getClass()).insertFromExisting(LevelDesigner.getSelected());};
 		for(int i=0;i<MAX_PARAMS;i++) {
 			labels.add((TextGroup)group.add(new TextGroup("",Main.fonts.get("consolas"),(2.0f*(i+0.5f)/MAX_PARAMS)-1,0.45f-1,0.04f,0.0f,0.0f,0.0f,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.CENTER).initThis()));
 		}
 		for(int i=0;i<MAX_PARAMS;i++) {
 			ArrayList<TextGroup> column=new ArrayList<TextGroup>();
 			for(int j=0;j<MAX_SUBPARAMS;j++) {
-				TextGroup tg=(TextGroup)group.add(new TextGroup("",Main.fonts.get("consolas"),(2.0f*(i+0.5f)/MAX_PARAMS)-1,0.45f-1-0.1f-(0.1f*j),0.03f,1.0f,0.0f,0.0f,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.CENTER).initThis());
+				TextGroup tg=(TextGroup)group.add(new TextGroup("",Main.fonts.get("consolas"),(2.0f*(i+0.5f)/MAX_PARAMS)-1,0.45f-1-0.1f-(0.1f*j),0.06f,1.0f,0.0f,0.0f,Thing2d.renderer).setAsParent().setPosMode(Thing2d.PosMode.CENTER).initThis());
 				final int i1=i; //More dumbery
 				final int j1=j;
 				tg.mouseClick=new Thing2d.EventListener() {private int i=i1; private int j=j1;
-					@Override public void onEvent() {
-						InsertableObjectDescriptor idesc=LevelDesigner.insertables.get(LevelDesigner.getSelected().getClass());
-						InsertableObjectDescriptor.Thingparameter p=idesc.dataparams.get(i);
-						Float[] data=p.get(LevelDesigner.getSelected());
-						data[j]+=0.5f;
-						p.set(LevelDesigner.getSelected(),data);
-						DesignerInsertMenu.this.refreshParams();
-					}};
+				@Override public void onEvent() {
+					InsertableObjectDescriptor idesc=LevelDesigner.insertables.get(LevelDesigner.getSelected().getClass());
+					InsertableObjectDescriptor.Thingparameter p=idesc.dataparams.get(i);
+					Float[] data=p.get(LevelDesigner.getSelected());
+					data[j]+=0.5f;
+					p.set(LevelDesigner.getSelected(),data);
+					DesignerInsertMenu.this.refreshParams();
+				}};
+				tg.mouseClickRight=new Thing2d.EventListener() {private int i=i1; private int j=j1;
+				@Override public void onEvent() {
+					InsertableObjectDescriptor idesc=LevelDesigner.insertables.get(LevelDesigner.getSelected().getClass());
+					InsertableObjectDescriptor.Thingparameter p=idesc.dataparams.get(i);
+					Float[] data=p.get(LevelDesigner.getSelected());
+					data[j]-=0.5f;
+					p.set(LevelDesigner.getSelected(),data);
+					DesignerInsertMenu.this.refreshParams();
+				}};
 				column.add(tg);
 			}
 			params.add(column);
 		}
 	}
 	public void refreshParams() {
+		if(LevelDesigner.getSelected()==null) {
+			for(int i=0;i<MAX_PARAMS;i++) {
+				labels.get(i).setString("");
+				for(int j=0;j<MAX_SUBPARAMS;j++) {
+					params.get(i).get(j).setString("");
+				}
+			}
+			return;
+		}
 		InsertableObjectDescriptor idesc=LevelDesigner.insertables.get(LevelDesigner.getSelected().getClass());
 		for(int i=0;i<labels.size();i++) {
 			if(i<idesc.dataparams.size()) {continue;}
@@ -108,7 +126,7 @@ public class DesignerInsertMenu extends Thing2d {
 				params.get(i).get(j).setString(""+(float)d[j]);
 			}
 		}
-		
+
 	}
 	@Override public void logic() {
 		group.logic();

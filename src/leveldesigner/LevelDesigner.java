@@ -3,18 +3,27 @@ package leveldesigner;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.vecmath.AxisAngle4f;
 import javax.vecmath.Matrix4f;
+import javax.vecmath.Vector2f;
+import javax.vecmath.Vector3f;
 
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL15;
 
 import com.bulletphysics.linearmath.Transform;
 
 import debug.GenericCubeFactory;
+import game.Chamber;
 import game.Main;
-import graphics2d.presets.DesignerInsertMenu;
+import graphics.RenderFeeder;
 import lepton.engine.rendering.GObject;
+import lepton.engine.rendering.lighting.Light;
 import lepton.optim.objpoollib.DefaultVecmathPools;
 import lepton.optim.objpoollib.PoolElement;
+import lepton.util.LeptonUtil;
+import lepton.util.advancedLogger.Logger;
+import objects.LightingConfiguration;
 import objects.Thing;
 import objects.Wall;
 import util.Util;
@@ -24,6 +33,7 @@ public class LevelDesigner {
 	private static GObject genericCube;
 	private static Transform genericCubeTransform=new Transform();
 	private static Thing selected=null;
+	public static String outputname="designer output";
 	private static void createGenericCube() {
 		if(genericCube!=null) {
 			return;
@@ -48,6 +58,11 @@ public class LevelDesigner {
 		p2.free();
 	}
 	public static void setSelected(Thing selected) {
+		if(selected==null) {
+			menu.refreshParams();
+			LevelDesigner.selected=null;
+			return;
+		}
 		createGenericCube();
 		if(selected!=LevelDesigner.selected) {
 //			if(LevelDesigner.selected!=null) {
@@ -61,11 +76,41 @@ public class LevelDesigner {
 			}
 		}
 	}
+	public static Chamber initDesignerChamber(Chamber designerTemplate) {
+		float inte=10f;
+		float r=255/255.0f;
+		float g=250/255.0f;
+		float b=244/255.0f;
+		float amb=0.02f;
+		designerTemplate.add(new Wall(new Vector2f(10,10), new Vector3f(0,0,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2).setSideMode(Wall.DOUBLE));
+		designerTemplate.add(new LightingConfiguration(
+				new Light(Light.LIGHT_POSITION,-9,3,-9, inte*r,inte*g,inte*b,1),
+				new Light(Light.LIGHT_POSITION,-9,3,9, inte*r,inte*g,inte*b,1),
+				new Light(Light.LIGHT_POSITION,9,3,-9, inte*r,inte*g,inte*b,1),
+				new Light(Light.LIGHT_POSITION,9,3,9, inte*r,inte*g,inte*b,1),
+				new Light(Light.LIGHT_AMBIENT,0,0,0, amb,amb,amb,1)));
+		designerTemplate.output(LevelDesigner.outputname);
+		return Chamber.input(LevelDesigner.outputname);
+	}
 	public static Thing getSelected() {
 		return selected;
 	}
 	public static void onFrame() {
-		if(genericCube!=null) {
+		if(Main.in.ir(GLFW.GLFW_KEY_F2)) {
+			RenderFeeder.feed(Chamber.input(LevelDesigner.outputname));
+		}
+		if(Main.in.ir(GLFW.GLFW_KEY_F4)) {
+			Logger.log(0,"Clear designer selection");
+			LevelDesigner.setSelected(null);
+		}
+		if(Main.in.i(GLFW.GLFW_KEY_LEFT_SHIFT)) {
+			if(Main.in.ir(GLFW.GLFW_KEY_F5)) {
+				Chamber d=new Chamber();
+				d=initDesignerChamber(d);
+				RenderFeeder.feed(d);
+			}
+		}
+		if(genericCube!=null && selected!=null) {
 			GL15.glDisable(GL15.GL_DEPTH_TEST);
 			genericCube.highRender_customTransform(genericCubeTransform);
 			GL15.glEnable(GL15.GL_DEPTH_TEST);

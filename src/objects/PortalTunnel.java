@@ -21,6 +21,7 @@ public class PortalTunnel extends Thing {
 		body.friction=1f;
 		this.geo.p.doBody(body);
 		this.portalable=true;
+		this.exemptFromChamberFeed=true;
 	}
 	@Override public void render() {
 		

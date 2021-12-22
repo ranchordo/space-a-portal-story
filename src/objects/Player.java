@@ -49,6 +49,7 @@ public class Player extends Thing {
 		this.origin=origin;
 		this.quat=quat;
 		this.portalsIgnore=true;
+		this.exemptFromChamberFeed=true;
 	}
 	public void handleNewSSPP(PortalPair pp) {
 		this.portalPair=pp;

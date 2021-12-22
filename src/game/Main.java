@@ -35,7 +35,6 @@ import lepton.engine.rendering.GLContextInitializer;
 import lepton.engine.rendering.InstanceAccumulator;
 import lepton.engine.rendering.Screen;
 import lepton.engine.rendering.Shader;
-import lepton.engine.rendering.TextureCache;
 import lepton.engine.rendering.lighting.BloomHandler;
 import lepton.engine.rendering.lighting.Light;
 import lepton.optim.objpoollib.PoolStrainer;
@@ -60,10 +59,11 @@ import physics.Movement;
 import physics.PortalNearCallback;
 
 public class Main {
-	public static final float volume=1.0f;
+	public static float volume=1.0f;
 	public static final boolean isDesigner=true;
 	public static void main(String[] args) {
 		try {
+			System.out.println("Starting...");
 			MainLoop();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -71,24 +71,14 @@ public class Main {
 		}
 	}
 	
-//	public static final int COMPUTE_SHADER=0x87;
-//	public static final int GRAPHICAL_SHADER=0x88;
 	public static long activeWindow;
 	public static ArrayList<Thing> things=new ArrayList<Thing>();
 	public static ArrayList<Thing2d> displays=new ArrayList<Thing2d>();
 	public static ArrayList<Thing> addSched=new ArrayList<Thing>();
 	public static ArrayList<Thing> remSched=new ArrayList<Thing>();
-//	public static boolean vr=false;
-//	public static boolean useGraphics=true;
-//	public static Texture activeTex=null;
-	public static TextureCache activeCache=new TextureCache();
-	public static Chamber activeChamber=new Chamber();
+	public static Chamber activeChamber=null;
 	public static Camera camera=new Camera();
-//	public static Shader activeShader=null;
 	public static ComputeShader activeComputeShader=null;
-//	public static int shaderSwitch=GRAPHICAL_SHADER;
-//	public static String dbg;
-//	public static Shader main;
 	private static boolean gcreq=false;
 	public static void requestGC() {gcreq=true;}
 
@@ -198,10 +188,10 @@ public class Main {
 		
 		GLContextInitializer.initializeGLContext(true,864,486,false,"Space - A Portal Story");
 		
-		String[] extensions=glGetString(GL_EXTENSIONS).split(" ");
-		for(String s : extensions) {
-			Logger.log(0,"Found GL extension: "+s);
-		}
+//		String[] extensions=glGetString(GL_EXTENSIONS).split(" ");
+//		for(String s : extensions) {
+//			Logger.log(0,"Found GL extension: "+s);
+//		}
 		
 		LeptonUtil.locationReference=Main.class;
 		activeWindow=win;
@@ -248,58 +238,16 @@ public class Main {
 
 //		IntBuffer testAv=stack.mallocInt(1);
 //		glGetIntegerv(0x9048,testAv);
-
-
-		float inte=10f;
-		float r=255/255.0f;
-		float g=250/255.0f;
-		float b=244/255.0f;
-		float amb=0.02f;
-
-		Chamber test=new Chamber();
 		
-//		Thing hld=null;
-
-
-		//PUT CHAMBER CONTENTS HERE:
-		//hld=test.add(new Door(new Vector3f(9.7f,0.2f,5),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),false));
-		//test.add(new FaithPlate(new Vector3f(4,0.04f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0))),new Vector3f(0,20,0)));
-
-		test.add(new Wall(new Vector2f(50,10), new Vector3f(0,0,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(90)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2).setSideMode(Wall.DOUBLE));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,20,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270)))).setAspect(new Vector2f(0.5f,0.5f)).setTextureType(2));
-		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,10), LeptonUtil.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(0)))).setSideMode(Wall.DOUBLE));
-//		test.add(new Wall(new Vector2f(10,10), new Vector3f(0,10,-10), LeptonUtil.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(180)))));
-		//((Door)hld).setAttached(test.add(new Wall(new Vector2f(10,10), new Vector3f(10,10,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90))))));
-		//test.add(new Fizzler(new Vector2f(2,2), new Vector3f(5,2,0), Util.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(90)))));
-//		test.add(new Wall(new Vector2f(30,10), new Vector3f(-10,10,0), LeptonUtil.AxisAngle_np(new AxisAngle4f(0,1,0,(float)Math.toRadians(270)))));
-		//test.add(new PortableWall(new Vector3f(0,6,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40)))));
-//		test.add(new Cube(new Vector3f(0,5,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),Cube.NORMAL));
-		//test.add(new ParticleThing(new ParticleEmitter(new Vector3f(0,2,0),0.0f,new Vector3f(-1,-1,-1),200,new Vector3f(2,2,2))));
-		//test.add(new Cube(new Vector3f(0,2,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
-		//test.add(new Cube(new Vector3f(0,3,0), Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(40))),0));
-		//test.add(new Shooter(new Vector3f(-1,5.15f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(270))),40000,true));
-		//hld=test.add(new ConnectionFilter().addToActivates(hld));
-		//hld=test.add(new Laser(new Vector3f(0,0.2f,1),Util.AxisAngle_np(new AxisAngle4f())));
-		//test.add(new FloorButton(new Vector3f(2,0.8f,0),Util.AxisAngle_np(new AxisAngle4f(1,0,0,0))).addToActivates(hld));
-		//test.add(new Trigger(new Vector3f(1,1,1),Util.AxisAngle_np(new AxisAngle4f()),new Vector3f(0,1,0)));
-		//test.add(new Funnel(new Vector3f(-4,0.27f,-6),Util.AxisAngle_np(new AxisAngle4f())));
-		//test.add(new LightBridge(new Vector3f(9,5f,1),Util.AxisAngle_np(new AxisAngle4f(0,0,1,(float)Math.toRadians(90)))));
-		//test.add(new Turret(new Vector3f(0,1.2f,-6),Util.AxisAngle_np(new AxisAngle4f(1,0,0,(float)Math.toRadians(0)))));
-		//test.add(new ParticleSystem(new Vector3f(5,1.2f,-6), new Color(100,100,100,20), new Vector3f(0.2f,2,0.2f), 0.5f, 0.6f, 5000, new Vector3f(0,1,0), new Vector3f(0.02f,0.02f,0.02f), false, 0) {});
-		//test.add(new ParticleSystem(new Vector3f(0,1.2f,0), new Color(242, 145, 53, 20), new Vector3f(0.2f,2,0.2f), 100, 0.2f, 1000, new Vector3f(0,0.4f,0), new Vector3f(0.02f,0.02f,0.02f), false, 0) {});
-		test.add(new LightingConfiguration(
-				new Light(Light.LIGHT_POSITION,-9,7,-9, inte*r,inte*g,inte*b,1),
-				new Light(Light.LIGHT_POSITION,-9,7,9, inte*r,inte*g,inte*b,1),
-				new Light(Light.LIGHT_POSITION,9,7,-9, inte*r,inte*g,inte*b,1),
-				new Light(Light.LIGHT_POSITION,9,7,9, inte*r,inte*g,inte*b,1),
-				new Light(Light.LIGHT_AMBIENT,0,0,0, amb,amb,amb,1)));
-
-		//STOP PUTTING CHAMBER CONTENTS HERE
-		String outputname="test"; //CHANGE CHMB NAME ("TEST" WILL EXPORT AS "TEST.CHMB")
-		test.output(outputname);
-		test=null;
-		RenderFeeder.feed(Chamber.input(outputname));
-
+		if(Main.isDesigner) {
+			if(!Chamber.fileExists(LevelDesigner.outputname)) {
+				Chamber designerTemplate=new Chamber();
+				LevelDesigner.initDesignerChamber(designerTemplate);
+			}
+			RenderFeeder.feed(Chamber.input(LevelDesigner.outputname));
+		}
+		
+		
 		glEnable(GL_TEXTURE_2D);
 
 		InputHandler in=new InputHandler(win);

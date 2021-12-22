@@ -20,6 +20,7 @@ public class InstancedRenderConfig3d {
 	}
 	@Override
 	public int hashCode() {
+//		System.out.println(this.tex.hashCode());
 		return (shader==null?0:shader.hashCode())+(tex==null?0:tex.hashCode())+(geo==null?0:geo.hashCode());
 	}
 	@Override
@@ -27,7 +28,7 @@ public class InstancedRenderConfig3d {
 		if(o instanceof InstancedRenderConfig3d) {
 			if(((InstancedRenderConfig3d)o).shader==this.shader) {
 				if(((InstancedRenderConfig3d)o).geo.hashCode()==this.geo.hashCode()) {
-					if(((InstancedRenderConfig3d)o).tex==this.tex) {
+					if(((InstancedRenderConfig3d)o).tex.hashCode()==this.tex.hashCode()) {
 						return true;
 					}
 				}
